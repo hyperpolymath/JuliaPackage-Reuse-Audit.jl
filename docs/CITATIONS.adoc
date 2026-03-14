@@ -1,34 +1,34 @@
-= {{PROJECT_NAME}} - Citation Guide
+= JuliaPackage-Reuse-Audit.jl - Citation Guide
 :toc:
 
 == BibTeX
 
 [source,bibtex]
 ----
-@software{{{PROJECT_NAME}}_{{CURRENT_YEAR}},
-  author = {{{AUTHOR_LAST}}, {{AUTHOR_FIRST}}},
-  title = {{{PROJECT_NAME}}},
-  year = {{{CURRENT_YEAR}}},
-  url = {https://github.com/{{OWNER}}/{{PROJECT_NAME}}},
-  license = {PMPL-1.0-or-later}
+@software{JuliaPackage-Reuse-Audit.jl_2026,
+  author = {Jewell, Jonathan D.A.},
+  title = {JuliaPackage-Reuse-Audit.jl},
+  year = {2026},
+  url = {https://github.com/hyperpolymath/JuliaPackage-Reuse-Audit.jl},
+  license = {MPL-2.0}
 }
 ----
 
 == Harvard Style
 
-{{AUTHOR_LAST}}, {{AUTHOR_INITIALS}} ({{CURRENT_YEAR}}) _{{PROJECT_NAME}}_ [Computer software]. Available at: https://github.com/{{OWNER}}/{{PROJECT_NAME}}
+Jewell, J.D.A. (2026) _JuliaPackage-Reuse-Audit.jl_ [Computer software]. Available at: https://github.com/hyperpolymath/JuliaPackage-Reuse-Audit.jl
 
 == OSCOLA
 
-{{AUTHOR}}, '{{PROJECT_NAME}}' ({{CURRENT_YEAR}}) <https://github.com/{{OWNER}}/{{PROJECT_NAME}}>
+Jonathan D.A. Jewell, 'JuliaPackage-Reuse-Audit.jl' (2026) <https://github.com/hyperpolymath/JuliaPackage-Reuse-Audit.jl>
 
 == MLA
 
-{{AUTHOR_LAST}}, {{AUTHOR_FIRST}} "{{PROJECT_NAME}}." {{CURRENT_YEAR}}, github.com/{{OWNER}}/{{PROJECT_NAME}}.
+Jewell, Jonathan D.A. "JuliaPackage-Reuse-Audit.jl." 2026, github.com/hyperpolymath/JuliaPackage-Reuse-Audit.jl.
 
 == APA 7
 
-{{AUTHOR_LAST}}, {{AUTHOR_INITIALS}} ({{CURRENT_YEAR}}). _{{PROJECT_NAME}}_ [Computer software]. GitHub. https://github.com/{{OWNER}}/{{PROJECT_NAME}}
+Jewell, J.D.A. (2026). _JuliaPackage-Reuse-Audit.jl_ [Computer software]. GitHub. https://github.com/hyperpolymath/JuliaPackage-Reuse-Audit.jl
 
 == See Also
 

@@ -6,7 +6,7 @@
      (name . "JuliaPackage-Reuse-Audit.jl")
      (tagline . "Automated Julia package scaffolding generator")
      (category . "developer-tools")
-     (license . "PMPL-1.0-or-later")
+     (license . "MPL-2.0")
      (inception-date . "2026")
      (repository . "https://github.com/hyperpolymath/JuliaPackage-Reuse-Audit.jl"))
     (development-practices

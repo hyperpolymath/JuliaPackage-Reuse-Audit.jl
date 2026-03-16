@@ -4,7 +4,7 @@
 ============================================================================
 TEMPLATE INSTRUCTIONS (delete this block before publishing)
 ============================================================================
-Replace all {{PLACEHOLDER}} values with your information:
+Replace all JuliaPackage-Reuse-Audit.jl values with your information:
   JuliaPackage Reuse Audit.Jl     - Your project name
   hyperpolymath            - GitHub username or org (e.g., hyperpolymath)
   JuliaPackage-Reuse-Audit.jl             - Repository name

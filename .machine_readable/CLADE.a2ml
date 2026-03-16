@@ -1,0 +1,26 @@
+# SPDX-License-Identifier: PMPL-1.0-or-later
+# Clade declaration — part of the gv-clade-index registry
+# See: https://github.com/hyperpolymath/gv-clade-index
+
+[identity]
+uuid = "ae643ba8-1fab-5f76-9c7c-5a4909094ce8"
+primary-forge = "github"
+primary-owner = "hyperpolymath"
+canonical-name = "JuliaPackage-Reuse-Audit.jl"
+prefixed-name = "dx-JuliaPackage-Reuse-Audit.jl"
+
+[clade]
+primary = "dx"
+secondary = []
+assigned = "2026-03-16"
+rationale = ""
+
+[forges]
+github = "hyperpolymath/JuliaPackage-Reuse-Audit.jl"
+gitlab = "hyperpolymath/JuliaPackage-Reuse-Audit.jl"
+bitbucket = "hyperpolymath/JuliaPackage-Reuse-Audit.jl"
+
+[lineage]
+type = "standalone"
+parent = "Julia package — dependency reuse auditing"
+born = "2026-03-16"

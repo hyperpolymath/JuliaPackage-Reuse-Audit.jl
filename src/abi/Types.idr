@@ -6,11 +6,11 @@
 ||| This module defines the Application Binary Interface (ABI) for this library.
 ||| All type definitions include formal proofs of correctness.
 |||
-||| Replace {{PROJECT}} with your project name.
+||| Replace JULIAPACKAGE_REUSE_AUDIT with your project name.
 |||
 ||| @see https://idris2.readthedocs.io for Idris2 documentation
 
-module {{PROJECT}}.ABI.Types
+module JULIAPACKAGE_REUSE_AUDIT.ABI.Types
 
 import Data.Bits
 import Data.So

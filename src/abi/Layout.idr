@@ -8,9 +8,9 @@
 |||
 ||| @see https://en.wikipedia.org/wiki/Data_structure_alignment
 
-module {{PROJECT}}.ABI.Layout
+module JULIAPACKAGE_REUSE_AUDIT.ABI.Layout
 
-import {{PROJECT}}.ABI.Types
+import JULIAPACKAGE_REUSE_AUDIT.ABI.Types
 import Data.Vect
 import Data.So
 

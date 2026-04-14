@@ -1,0 +1,57 @@
+# SPDX-License-Identifier: PMPL-1.0-or-later
+name: Security Audit
+on:
+  schedule:
+    - cron: '0 0 * * 1'  # Every Monday at midnight
+  workflow_dispatch:  # Allow manual triggering
+
+permissions:
+  contents: read
+
+jobs:
+  security-audit:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: julia-actions/setup-julia@4c0cb0fce8556fdb04a90347310e5db8b1f98fb9 # v2
+        with:
+          version: '1.10'
+      
+      - name: Install Julia security tools
+        run: julia --project=docs -e 'using Pkg; Pkg.add(["JuliaFormatter", "JET", "Aqua"])'
+      
+      - name: Julia format check
+        run: julia --project=docs -e '
+          using JuliaFormatter
+          JuliaFormatter.format("."; verbose=true, overwrite=false)
+        '
+      
+      - name: Julia static analysis
+        run: julia --project=docs -e '
+          using JET
+          JET.test_package(path=".")
+        '
+      
+      - name: Julia package audit
+        run: julia --project=docs -e '
+          using Aqua
+          Aqua.test_all(deps=true)
+        '
+      
+      - name: Check for outdated dependencies
+        run: julia --project=. -e '
+          using Pkg
+          Pkg.status()
+          Pkg.update()
+        '
+        continue-on-error: true
+      
+      - name: Security summary
+        run: |
+          echo "=== Security Audit Summary ==="
+          echo "Completed: $(date)"
+          echo "Tools: JuliaFormatter, JET, Aqua"
+          echo "Status: See individual job outputs"
+          echo "Next audit: Next Monday"

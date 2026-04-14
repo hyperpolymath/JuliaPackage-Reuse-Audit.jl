@@ -29,7 +29,7 @@ jobs:
       - name: Check TODO/FIXME
         run: |
           echo "=== TODOs ==="
-          grep -rn "TODO\|FIXME\|HACK\|XXX" --include="*.rs" --include="*.res" --include="*.py" --include="*.ex" . | head -20 || echo "None found"
+          grep -rn "TODO\|FIXME\|HACK\|XXX" --include="*.rs" --include="*.res" --include="*.py" --include="*.ex" --include="*.jl" . | head -20 || echo "None found"
       
       - name: Check for large files
         run: |
@@ -57,3 +57,37 @@ jobs:
           else
             echo "✅ Core documentation present"
           fi
+
+  julia-security:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: julia-actions/setup-julia@4c0cb0fce8556fdb04a90347310e5db8b1f98fb9 # v2
+        with:
+          version: '1.10'
+      
+      - name: Install Julia security tools
+        run: julia --project=docs -e 'using Pkg; Pkg.add(["JuliaFormatter", "JET", "Aqua"])'
+      
+      - name: Julia format check
+        run: julia --project=docs -e '
+          using JuliaFormatter
+          JuliaFormatter.format("."; verbose=true, overwrite=false)
+        '
+        continue-on-error: true
+      
+      - name: Julia static analysis
+        run: julia --project=docs -e '
+          using JET
+          JET.test_package(path=".")
+        '
+        continue-on-error: true
+      
+      - name: Julia package audit
+        run: julia --project=docs -e '
+          using Aqua
+          Aqua.test_all(deps=true)
+        '
+        continue-on-error: true

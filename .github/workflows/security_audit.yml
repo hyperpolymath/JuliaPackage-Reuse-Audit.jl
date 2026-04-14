@@ -23,29 +23,16 @@ jobs:
         run: julia --project=docs -e 'using Pkg; Pkg.add(["JuliaFormatter", "JET", "Aqua"])'
       
       - name: Julia format check
-        run: julia --project=docs -e '
-          using JuliaFormatter
-          JuliaFormatter.format("."; verbose=true, overwrite=false)
-        '
+        run: julia --project=docs -e 'using JuliaFormatter; JuliaFormatter.format("."; verbose=true, overwrite=false)'
       
       - name: Julia static analysis
-        run: julia --project=docs -e '
-          using JET
-          JET.test_package(path=".")
-        '
+        run: julia --project=docs -e 'using JET; JET.test_package(path=".")'
       
       - name: Julia package audit
-        run: julia --project=docs -e '
-          using Aqua
-          Aqua.test_all(deps=true)
-        '
+        run: julia --project=docs -e 'using Aqua; Aqua.test_all(deps=true)'
       
       - name: Check for outdated dependencies
-        run: julia --project=. -e '
-          using Pkg
-          Pkg.status()
-          Pkg.update()
-        '
+        run: julia --project=. -e 'using Pkg; Pkg.status(); Pkg.update()'
         continue-on-error: true
       
       - name: Security summary

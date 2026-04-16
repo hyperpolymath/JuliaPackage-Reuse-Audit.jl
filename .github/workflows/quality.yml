@@ -72,22 +72,13 @@ jobs:
         run: julia --project=docs -e 'using Pkg; Pkg.add(["JuliaFormatter", "JET", "Aqua"])'
       
       - name: Julia format check
-        run: julia --project=docs -e '
-          using JuliaFormatter
-          JuliaFormatter.format("."; verbose=true, overwrite=false)
-        '
+        run: julia --project=docs -e 'using JuliaFormatter; JuliaFormatter.format("."; verbose=true, overwrite=false)'
         continue-on-error: true
       
       - name: Julia static analysis
-        run: julia --project=docs -e '
-          using JET
-          JET.test_package(path=".")
-        '
+        run: julia --project=docs -e 'using JET; JET.test_package(path=".")'
         continue-on-error: true
       
       - name: Julia package audit
-        run: julia --project=docs -e '
-          using Aqua
-          Aqua.test_all(deps=true)
-        '
+        run: julia --project=docs -e 'using Aqua; Aqua.test_all(deps=true)'
         continue-on-error: true

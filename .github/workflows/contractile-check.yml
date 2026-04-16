@@ -1,0 +1,32 @@
+# SPDX-License-Identifier: PMPL-1.0-or-later
+name: Contractile Checks
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contractile-check:
+    name: Contractile Checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+
+      - name: Install just
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | bash -s -- --to /usr/local/bin
+          echo "$(just --version)"
+
+      - name: Run must checks
+        run: just must-check
+
+      - name: Run trust verifications
+        run: just trust-verify

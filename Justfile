@@ -693,13 +693,13 @@ doctor:
     check "Zig"               zig       "0.13" 
     check "Julia"             julia     "1.10" 
 # Optional tools
-if command -v panic-attack >/dev/null 2>&1; then
+    if command -v panic-attack >/dev/null 2>&1; then
     echo "  [OK]   panic-attack — available"
     PASS=$((PASS + 1))
-else
+    else
     echo "  [WARN] panic-attack — not found (pre-commit scanner)"
     WARN=$((WARN + 1))
-fi
+    fi
     echo ""
     echo "  Result: $PASS passed, $FAIL failed, $WARN warnings"
     if [ "$FAIL" -gt 0 ]; then
@@ -715,10 +715,10 @@ heal:
     echo "  Juliapackage Reuse Audit.Jl Heal — Automatic Tool Installation"
     echo "═══════════════════════════════════════════════════"
     echo ""
-if ! command -v just >/dev/null 2>&1; then
+    if ! command -v just >/dev/null 2>&1; then
     echo "Installing just..."
     cargo install just 2>/dev/null || echo "Install just from https://just.systems"
-fi
+    fi
     echo ""
     echo "Heal complete. Run 'just doctor' to verify."
 
@@ -758,16 +758,16 @@ help-me:
     echo "  Juliapackage Reuse Audit.Jl — Common Workflows"
     echo "═══════════════════════════════════════════════════"
     echo ""
-echo "FIRST TIME SETUP:"
-echo "  just doctor           Check toolchain"
-echo "  just heal             Fix missing tools"
-echo "" 
-echo "PRE-COMMIT:"
-echo "  just assail           Run panic-attacker scan"
-echo ""
-echo "LEARN:"
-echo "  just tour             Guided project tour"
-echo "  just default          List all recipes" 
+    echo "FIRST TIME SETUP:"
+    echo "  just doctor           Check toolchain"
+    echo "  just heal             Fix missing tools"
+    echo "" 
+    echo "PRE-COMMIT:"
+    echo "  just assail           Run panic-attacker scan"
+    echo ""
+    echo "LEARN:"
+    echo "  just tour             Guided project tour"
+    echo "  just default          List all recipes" 
 
 
 # Print the current CRG grade (reads from READINESS.md '**Current Grade:** X' line)

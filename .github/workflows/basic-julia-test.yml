@@ -1,7 +1,11 @@
+# SPDX-License-Identifier: MPL-2.0
 name: Basic Julia Test
 on:
   push:
     branches: [ main ]
+
+permissions:
+  contents: read
 
 jobs:
   test:

@@ -1,8 +1,12 @@
+# SPDX-License-Identifier: MPL-2.0
 name: Test Security Audit
 on:
   push:
     branches: [ main ]
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   test:

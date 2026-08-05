@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MPL-2.0
-# Copyright (c) {{CURRENT_YEAR}} {{AUTHOR}} (hyperpolymath) <{{AUTHOR_EMAIL}}>
+# Copyright (c) 2026 Jonathan D.A. Jewell (hyperpolymath) <j.d.a.jewell@open.ac.uk>
 #
-# Containerfile for {{PROJECT_NAME}}
+# Containerfile for Overview
 # Build: podman build -t juliapackage-reuse-audit:latest -f Containerfile .
 # Run:   podman run --rm -it juliapackage-reuse-audit:latest
 # Seal:  selur seal juliapackage-reuse-audit:latest

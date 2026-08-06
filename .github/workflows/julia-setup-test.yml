@@ -16,4 +16,5 @@ jobs:
       - uses: julia-actions/setup-julia@v2
         with:
           version: '1.10'
-      - run: julia -e 'println("Julia setup successful: ", VERSION)'
+      - run: |
+          julia -e 'println("Julia setup successful: ", VERSION)'

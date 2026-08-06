@@ -15,4 +15,5 @@ jobs:
       - uses: julia-actions/setup-julia@v1
         with:
           version: '1.6'
-      - run: julia -e 'println("Julia version: ", VERSION)'
+      - run: |
+          julia -e 'println("Julia version: ", VERSION)'

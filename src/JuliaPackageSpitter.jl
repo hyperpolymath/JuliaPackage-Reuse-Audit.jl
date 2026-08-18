@@ -26,4 +26,4 @@ include("generator.jl")
 using .Generator
 export PackageSpec, generate_package
 
-end # module
+end # module JuliaPackageSpitter

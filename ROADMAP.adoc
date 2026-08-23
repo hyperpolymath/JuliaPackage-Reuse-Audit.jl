@@ -30,7 +30,7 @@
 * [ ] **Verified Scaffolding**: Formally prove that the generated scaffolding itself satisfies certain "Non-Interference" properties with the domain code.
 
 === Multi-Language Synthesis
-* [ ] **Polyglot Bridge Generator**: Use PolyglotFormalisms.jl to generate semantically equivalent skeletons in ReScript or Elixir for cross-language projects.
+* [ ] **Polyglot Bridge Generator**: Use PolyglotFormalisms.jl to generate semantically equivalent skeletons in AffineScript or Elixir for cross-language projects.
 * [ ] **WASM Target Scaffolder**: Specialized profile for generating Julia packages intended for browser-based WASM deployment.
 
 === Meta-Audit Tools

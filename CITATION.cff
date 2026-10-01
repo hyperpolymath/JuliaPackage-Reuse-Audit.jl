@@ -2,7 +2,7 @@ cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
 type: software
 title: "JuliaPackage-Reuse-Audit.jl"
-abstract: "Julia package: JuliaPackage-Reuse-Audit"
+abstract: "Julia package: JuliaPackageSpitter"
 authors:
   - family-names: "Jewell"
     given-names: "Jonathan D.A."

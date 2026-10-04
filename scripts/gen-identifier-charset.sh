@@ -182,10 +182,9 @@ suffix-has-dot (c ∷ cs) = any-there (suffix-has-dot cs)
 -- legal-stop is matched the index is concrete and no witness carries a variable
 -- index. That is the shape charset-excludes uses, and the one Agda accepts.
 repo-form-not-legal-ident : (pkg : List Char) -> ¬ (LegalIdent (repoNameOf pkg))
-repo-form-not-legal-ident pkg legal =
-  legal-ident-excludes dot-not-ident-char dot-not-ident-start
-    (LegalIdent.start legal) (LegalIdent.charset legal)
-    (subst (Any (IsChar '.')) (sym (LegalIdent.shape legal)) (suffix-has-dot pkg))
+repo-form-not-legal-ident [] (legal-stop st w) = dot-not-ident-start st
+repo-form-not-legal-ident (c ∷ cs) (legal-stop st w) =
+  charset-excludes dot-not-ident-char (cs ++ jlSuffix) w (suffix-has-dot cs)
 BODY
 } >"$out.tmp"
 

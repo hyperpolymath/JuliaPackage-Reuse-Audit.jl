@@ -33,9 +33,9 @@ retired-name1-illegal-char = any-there (any-there (any-there (any-there (any-the
 -- Therefore this name is not a legal Julia identifier, and no package could ever
 -- have carried it.
 retired-name1-not-legal-ident : ¬ (LegalIdent retiredName1)
-retired-name1-not-legal-ident legal =
+retired-name1-not-legal-ident (legal-stop start-witness charset-witness) =
   legal-ident-excludes hyphen-not-ident-char hyphen-not-ident-start
-    retiredName1 legal retired-name1-illegal-char
+    start-witness charset-witness retired-name1-illegal-char
 
 -- Retired name 2: "JuliaPackage-Reuse-Audit" (docs/naming/retired-names.txt)
 retiredName2 : List Char
@@ -48,9 +48,9 @@ retired-name2-illegal-char = any-there (any-there (any-there (any-there (any-the
 -- Therefore this name is not a legal Julia identifier, and no package could ever
 -- have carried it.
 retired-name2-not-legal-ident : ¬ (LegalIdent retiredName2)
-retired-name2-not-legal-ident legal =
+retired-name2-not-legal-ident (legal-stop start-witness charset-witness) =
   legal-ident-excludes hyphen-not-ident-char hyphen-not-ident-start
-    retiredName2 legal retired-name2-illegal-char
+    start-witness charset-witness retired-name2-illegal-char
 
 -- Retired name 3: "juliapackage-reuse-audit" (docs/naming/retired-names.txt)
 retiredName3 : List Char
@@ -63,8 +63,8 @@ retired-name3-illegal-char = any-there (any-there (any-there (any-there (any-the
 -- Therefore this name is not a legal Julia identifier, and no package could ever
 -- have carried it.
 retired-name3-not-legal-ident : ¬ (LegalIdent retiredName3)
-retired-name3-not-legal-ident legal =
+retired-name3-not-legal-ident (legal-stop start-witness charset-witness) =
   legal-ident-excludes hyphen-not-ident-char hyphen-not-ident-start
-    retiredName3 legal retired-name3-illegal-char
+    start-witness charset-witness retired-name3-illegal-char
 
 -- 3 retired name(s) refuted.

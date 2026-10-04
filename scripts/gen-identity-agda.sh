@@ -396,9 +396,9 @@ retired-name${n}-illegal-char = ${witness}
 -- Therefore this name is not a legal Julia identifier, and no package could ever
 -- have carried it.
 retired-name${n}-not-legal-ident : ¬ (LegalIdent retiredName${n})
-retired-name${n}-not-legal-ident legal =
+retired-name${n}-not-legal-ident (legal-stop start-witness charset-witness) =
   legal-ident-excludes ${word}-not-ident-char ${word}-not-ident-start
-    retiredName${n} legal retired-name${n}-illegal-char
+    start-witness charset-witness retired-name${n}-illegal-char
 EOF
   done <"$register"
 

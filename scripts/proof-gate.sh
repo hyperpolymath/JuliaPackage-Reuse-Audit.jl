@@ -81,6 +81,41 @@ wanted() {
 declare -A result=()
 declare -A detail=()
 
+# Annotations are the evidence channel. A CI log needs a blob host that is not
+# always reachable (and is not readable by a reviewer on a phone); a check-run
+# annotation is part of the run's own API record and shows up inline on the pull
+# request. So every section publishes its verdict, and a failing section
+# publishes the lines that made it fail.
+tmpdir="$(mktemp -d)"
+trap 'rm -rf "$tmpdir"' EXIT
+
+escape_annotation() {
+  awk 'BEGIN { ORS = "" }
+       { gsub(/%/, "%25"); gsub(/\r/, "%0D"); gsub(/:/, "%3A");
+         if (NR > 1) print "%0A"; print }'
+}
+
+annotate() { # level, title, body
+  local level="$1" title="$2" body="$3" escaped_title escaped_body
+  if [ -z "${GITHUB_ACTIONS:-}" ]; then return 0; fi
+  escaped_title="$(printf '%s' "$title" | escape_annotation)"
+  escaped_body="$(printf '%s' "$body" | escape_annotation)"
+  printf '::%s title=%s::%s\n' "$level" "$escaped_title" "$escaped_body"
+}
+
+# The lines that explain a failure: every FAIL line, else the last lines of the
+# section's output (Agda reports a mismatch as an indented block, not as FAIL).
+failure_excerpt() { # logfile, max-lines
+  local log="$1" max="$2" picked
+  # FAIL lines with their context: every harness in this gate prints the
+  # diagnostic that made it fail immediately after the verdict.
+  picked="$(grep -E '^FAIL' -A 12 "$log" 2>/dev/null | head -n "$max")"
+  if [ -z "$picked" ]; then
+    picked="$(tail -n "$max" "$log" 2>/dev/null)"
+  fi
+  printf '%s' "$picked"
+}
+
 run_section() { # name, description, command...
   local name="$1" desc="$2"
   shift 2
@@ -88,15 +123,22 @@ run_section() { # name, description, command...
   printf '\n────────────────────────────────────────────────────────────\n'
   printf 'section: %s — %s\n' "$name" "$desc"
   printf '────────────────────────────────────────────────────────────\n'
-  local status=0
-  "$@" || status=$?
+  local status=0 log="${tmpdir}/${name}.log"
+  "$@" 2>&1 | tee "$log"
+  status="${PIPESTATUS[0]}"
   if [ "$status" -eq 0 ]; then
     result["$name"]="PASS"
     detail["$name"]="$desc"
+    annotate notice "gate section ${name}: PASS" "${desc}
+$(grep -cE '^PASS' "$log" 2>/dev/null | sed 's/^/checks reported PASS: /')"
   else
     result["$name"]="FAIL"
     detail["$name"]="$desc (exit $status)"
     printf 'section %s FAILED with exit %d\n' "$name" "$status"
+    annotate error "gate section ${name}: FAIL" "${desc}
+exit status ${status}
+
+$(failure_excerpt "$log" 26)"
   fi
 }
 
@@ -203,7 +245,11 @@ fi
 
 printf '\n%d section(s) ran, %d failed\n' "$ran" "$failures"
 if [ "$failures" -gt 0 ]; then
+  annotate error "package identity gate: FAIL" \
+    "${ran} section(s) ran, ${failures} failed. See the per-section annotations for what each one reported."
   printf 'FAIL: package identity gate\n'
   exit 1
 fi
+annotate notice "package identity gate: PASS" \
+  "${ran} section(s) ran, 0 failed. Repository name and package name agree, the proofs typecheck, the false claims are rejected, and the trusted base is empty."
 printf 'PASS: package identity gate\n'

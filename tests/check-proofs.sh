@@ -46,18 +46,29 @@ fi
 
 for module in "${modules[@]}"; do
   printf 'checking %s\n' "$module"
-  if ! agda "${AGDA_FLAGS[@]}" -i proofs/agda "$module"; then
-    printf 'FAIL: %s did not typecheck\n' "$module"
+  status=0
+  # Captured so that the diagnostic is printed immediately after the verdict
+  # rather than before it: a reviewer (or an annotation) then sees which module
+  # failed and why in one place.
+  output="$(agda "${AGDA_FLAGS[@]}" -i proofs/agda "$module" 2>&1)" || status=$?
+  if [ "$status" -ne 0 ]; then
+    printf 'FAIL: %s did not typecheck (exit %d)\n%s\n' "$module" "$status" "$output"
     fail=1
+  elif [ -n "$output" ]; then
+    printf '%s\n' "$output"
   fi
 done
 
 live="generated/agda/LiveIdentity.agda"
 if [ -f "$live" ]; then
   printf 'checking %s (generated from live repository state)\n' "$live"
-  if ! agda "${AGDA_FLAGS[@]}" -i proofs/agda -i generated/agda "$live"; then
-    printf 'FAIL: %s did not typecheck — the live repository identity does not satisfy the reconciliation invariant\n' "$live"
+  status=0
+  output="$(agda "${AGDA_FLAGS[@]}" -i proofs/agda -i generated/agda "$live" 2>&1)" || status=$?
+  if [ "$status" -ne 0 ]; then
+    printf 'FAIL: %s did not typecheck (exit %d) — the live repository identity does not satisfy the reconciliation invariant\n%s\n' "$live" "$status" "$output"
     fail=1
+  elif [ -n "$output" ]; then
+    printf '%s\n' "$output"
   fi
 else
   printf 'FAIL: %s is missing. Generate it with:\n  bash scripts/gen-identity-agda.sh --mode live --out %s\nRefusing to report the identity gate as passed without checking the live identity.\n' "$live" "$live"

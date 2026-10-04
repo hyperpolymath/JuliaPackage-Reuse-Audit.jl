@@ -39,15 +39,15 @@ canonical-package-nonempty = nonempty 'J' canonicalPackageTail
 -- below is checked against the real first character: naming the wrong one is a
 -- type error, which is what makes this a check and not a decoration.
 canonical-package-start : IdentStart (head canonical-package-nonempty)
-canonical-package-start = sJ
+canonical-package-start = start-J
 
 -- Every character of the tail is legal, and therefore so is every character of
 -- the name.
 canonical-package-tail-charset : AllIdentChars canonicalPackageTail
-canonical-package-tail-charset = aic-cons cu (aic-cons cl (aic-cons ci (aic-cons ca (aic-cons cP (aic-cons ca (aic-cons cc (aic-cons ck (aic-cons ca (aic-cons cg (aic-cons ce (aic-cons cS (aic-cons cp (aic-cons ci (aic-cons ct (aic-cons ct (aic-cons ce (aic-cons cr (aic-nil))))))))))))))))))
+canonical-package-tail-charset = aic-cons char-u (aic-cons char-l (aic-cons char-i (aic-cons char-a (aic-cons char-P (aic-cons char-a (aic-cons char-c (aic-cons char-k (aic-cons char-a (aic-cons char-g (aic-cons char-e (aic-cons char-S (aic-cons char-p (aic-cons char-i (aic-cons char-t (aic-cons char-t (aic-cons char-e (aic-cons char-r (aic-nil))))))))))))))))))
 
 canonical-package-charset : AllIdentChars canonicalPackage
-canonical-package-charset = aic-cons cJ canonical-package-tail-charset
+canonical-package-charset = aic-cons char-J canonical-package-tail-charset
 
 -- Therefore the package name is a legal Julia identifier. The head and tail are
 -- bound explicitly, so nothing here depends on Agda inferring either from a

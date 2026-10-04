@@ -45,9 +45,9 @@ retired-name1-illegal-char = any-there (any-there (any-there (any-there (any-the
 -- Therefore the tail is not a list of legal identifier characters, and the name
 -- is not a legal Julia identifier: no package could ever have carried it.
 retired-name1-not-legal-ident : ¬ (LegalIdent retiredName1)
-retired-name1-not-legal-ident (legal-stop start-witness charset-witness) =
+retired-name1-not-legal-ident (legal-stop startWitness charsetWitness) =
   charset-excludes {c = '-'} hyphen-not-ident-char retiredName1Tail
-    charset-witness retired-name1-illegal-char
+    charsetWitness retired-name1-illegal-char
 
 -- Retired name 2: "JuliaPackage-Reuse-Audit" (docs/naming/retired-names.txt)
 retiredName2 : List Char
@@ -65,9 +65,9 @@ retired-name2-illegal-char = any-there (any-there (any-there (any-there (any-the
 -- Therefore the tail is not a list of legal identifier characters, and the name
 -- is not a legal Julia identifier: no package could ever have carried it.
 retired-name2-not-legal-ident : ¬ (LegalIdent retiredName2)
-retired-name2-not-legal-ident (legal-stop start-witness charset-witness) =
+retired-name2-not-legal-ident (legal-stop startWitness charsetWitness) =
   charset-excludes {c = '-'} hyphen-not-ident-char retiredName2Tail
-    charset-witness retired-name2-illegal-char
+    charsetWitness retired-name2-illegal-char
 
 -- Retired name 3: "juliapackage-reuse-audit" (docs/naming/retired-names.txt)
 retiredName3 : List Char
@@ -85,8 +85,8 @@ retired-name3-illegal-char = any-there (any-there (any-there (any-there (any-the
 -- Therefore the tail is not a list of legal identifier characters, and the name
 -- is not a legal Julia identifier: no package could ever have carried it.
 retired-name3-not-legal-ident : ¬ (LegalIdent retiredName3)
-retired-name3-not-legal-ident (legal-stop start-witness charset-witness) =
+retired-name3-not-legal-ident (legal-stop startWitness charsetWitness) =
   charset-excludes {c = '-'} hyphen-not-ident-char retiredName3Tail
-    charset-witness retired-name3-illegal-char
+    charsetWitness retired-name3-illegal-char
 
 -- 3 retired name(s) refuted.

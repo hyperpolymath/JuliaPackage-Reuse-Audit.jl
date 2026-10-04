@@ -83,11 +83,16 @@ open import PackageNaming using (⊥; ¬_; subst; _++_; jlSuffix; repoNameOf)
 data IdentChar : Char -> Set where
 HEADER
 
-  for c in $upper; do printf "  c%s : IdentChar '%s'\n" "$c" "$c"; done
-  for c in $lower; do printf "  c%s : IdentChar '%s'\n" "$c" "$c"; done
-  for c in $digits; do printf "  cDigit%s : IdentChar '%s'\n" "$c" "$c"; done
-  printf "  cUnderscore : IdentChar '_'\n"
-  printf "  cBang : IdentChar '!'\n"
+  # Constructor names are spelled char-X, not cX: cX collides with ordinary
+  # variable names. Agda parses a pattern position greedily, so a clause variable
+  # called `st` was read as the IdentStart constructor for 't' and the clause was
+  # rejected as impossible ("'t' ≟ '.'"). A prefix that no variable would use
+  # removes the trap instead of documenting it.
+  for c in $upper; do printf "  char-%s : IdentChar '%s'\n" "$c" "$c"; done
+  for c in $lower; do printf "  char-%s : IdentChar '%s'\n" "$c" "$c"; done
+  for c in $digits; do printf "  char-%s : IdentChar '%s'\n" "$c" "$c"; done
+  printf "  char-underscore : IdentChar '_'\n"
+  printf "  char-bang : IdentChar '!'\n"
 
   cat <<'BODY'
 
@@ -95,9 +100,9 @@ HEADER
 data IdentStart : Char -> Set where
 BODY
 
-  for c in $upper; do printf "  s%s : IdentStart '%s'\n" "$c" "$c"; done
-  for c in $lower; do printf "  s%s : IdentStart '%s'\n" "$c" "$c"; done
-  printf "  sUnderscore : IdentStart '_'\n"
+  for c in $upper; do printf "  start-%s : IdentStart '%s'\n" "$c" "$c"; done
+  for c in $lower; do printf "  start-%s : IdentStart '%s'\n" "$c" "$c"; done
+  printf "  start-underscore : IdentStart '_'\n"
 
   cat <<'BODY'
 
@@ -142,10 +147,10 @@ dot-not-ident-start ()
 charset-excludes : {c : Char} -> ¬ (IdentChar c)
                  -> (cs : List Char) -> AllIdentChars cs -> ¬ (Any (IsChar c) cs)
 charset-excludes bad [] aic-nil ()
-charset-excludes bad (x ∷ xs) (aic-cons ic ics) (any-here h) =
-  bad (subst IdentChar h ic)
-charset-excludes bad (x ∷ xs) (aic-cons ic ics) (any-there a) =
-  charset-excludes bad xs ics a
+charset-excludes bad (x ∷ xs) (aic-cons hereChar restChars) (any-here h) =
+  bad (subst IdentChar h hereChar)
+charset-excludes bad (x ∷ xs) (aic-cons hereChar restChars) (any-there a) =
+  charset-excludes bad xs restChars a
 
 -- There is deliberately no general lemma of the shape
 --
@@ -181,8 +186,8 @@ append-illegal-refute : {c : Char} -> ¬ (IdentChar c)
                       -> (xs ys : List Char) -> Any (IsChar c) ys
                       -> AllIdentChars (xs ++ ys) -> ⊥
 append-illegal-refute bad [] ys a w = charset-excludes bad ys w a
-append-illegal-refute bad (x ∷ xs) ys a (aic-cons ic ics) =
-  append-illegal-refute bad xs ys a ics
+append-illegal-refute bad (x ∷ xs) ys a (aic-cons hereChar restChars) =
+  append-illegal-refute bad xs ys a restChars
 
 -- Therefore no repository-form name is a legal Julia identifier, for any package
 -- name whatsoever. A repository name cannot be the name of the package it holds,
@@ -195,9 +200,10 @@ append-illegal-refute bad (x ∷ xs) ys a (aic-cons ic ics) =
 -- since ".jl" would have to begin with '.'; a non-empty one by the '.' its suffix
 -- carries, through the lemma above.
 repo-form-not-legal-ident : (pkg : List Char) -> ¬ (LegalIdent (repoNameOf pkg))
-repo-form-not-legal-ident [] (legal-stop st w) = dot-not-ident-start st
-repo-form-not-legal-ident (x ∷ xs) (legal-stop st w) =
-  append-illegal-refute dot-not-ident-char xs jlSuffix (any-here refl) w
+repo-form-not-legal-ident [] (legal-stop startWitness charsetWitness) =
+  dot-not-ident-start startWitness
+repo-form-not-legal-ident (x ∷ xs) (legal-stop startWitness charsetWitness) =
+  append-illegal-refute dot-not-ident-char xs jlSuffix (any-here refl) charsetWitness
 BODY
 } >"$out.tmp"
 

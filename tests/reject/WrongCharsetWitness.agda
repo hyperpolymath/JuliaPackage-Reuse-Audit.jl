@@ -12,4 +12,4 @@ open import IdentifierCharset
 -- a style problem. This is the check that stops a generator emitting witnesses
 -- for names it should have refused. The verifier requires a type mismatch here.
 falseClaim : IdentChar '-'
-falseClaim = cJ
+falseClaim = char-J

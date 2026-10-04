@@ -9,4 +9,4 @@ open import IdentifierCharset
 -- Deliberately false: a witness that a digit may begin a Julia identifier,
 -- offered as the constructor for 'A'. The verifier requires a type mismatch here.
 falseClaim : IdentStart '1'
-falseClaim = sA
+falseClaim = start-A

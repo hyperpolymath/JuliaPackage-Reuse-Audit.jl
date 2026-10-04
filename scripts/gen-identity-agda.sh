@@ -106,19 +106,17 @@ agda_chars_or_nil() {
 
 identchar_ctor() {
   case "$1" in
-    [A-Z]) printf 'c%s' "$1" ;;
-    [a-z]) printf 'c%s' "$1" ;;
-    [0-9]) printf 'cDigit%s' "$1" ;;
-    _) printf 'cUnderscore' ;;
-    '!') printf 'cBang' ;;
+    [A-Za-z0-9]) printf 'char-%s' "$1" ;;
+    _) printf 'char-underscore' ;;
+    '!') printf 'char-bang' ;;
     *) return 1 ;;
   esac
 }
 
 identstart_ctor() {
   case "$1" in
-    [A-Za-z]) printf 's%s' "$1" ;;
-    _) printf 'sUnderscore' ;;
+    [A-Za-z]) printf 'start-%s' "$1" ;;
+    _) printf 'start-underscore' ;;
     *) return 1 ;;
   esac
 }
@@ -412,8 +410,8 @@ EOF
 -- The offending character is the first one, so the leading-character rule alone
 -- refutes the name: no constructor of IdentStart has '${target}' as its index.
 retired-name${n}-not-legal-ident : ¬ (LegalIdent retiredName${n})
-retired-name${n}-not-legal-ident (legal-stop start-witness charset-witness) =
-  ${word}-not-ident-start start-witness
+retired-name${n}-not-legal-ident (legal-stop startWitness charsetWitness) =
+  ${word}-not-ident-start startWitness
 EOF
     else
       rest_witness="$(any_char_witness "$rest" "$target")" ||
@@ -432,9 +430,9 @@ retired-name${n}-illegal-char = ${rest_witness}
 -- Therefore the tail is not a list of legal identifier characters, and the name
 -- is not a legal Julia identifier: no package could ever have carried it.
 retired-name${n}-not-legal-ident : ¬ (LegalIdent retiredName${n})
-retired-name${n}-not-legal-ident (legal-stop start-witness charset-witness) =
+retired-name${n}-not-legal-ident (legal-stop startWitness charsetWitness) =
   charset-excludes {c = '${target}'} ${word}-not-ident-char retiredName${n}Tail
-    charset-witness retired-name${n}-illegal-char
+    charsetWitness retired-name${n}-illegal-char
 EOF
     fi
   done <"$register"

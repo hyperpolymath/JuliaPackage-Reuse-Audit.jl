@@ -261,13 +261,14 @@ ${prefix}-package-tail-charset = ${tail_witness}
 ${prefix}-package-charset : AllIdentChars ${prefix}Package
 ${prefix}-package-charset = aic-cons ${first_ctor} ${prefix}-package-tail-charset
 
--- Therefore the package name is a legal Julia identifier. The implicit arguments
--- are given explicitly so that nothing here depends on Agda inferring the head
--- character from the witness type.
+-- Therefore the package name is a legal Julia identifier. The head and tail are
+-- bound explicitly and the shape equation is discharged by refl: both sides reduce
+-- to the same list of characters, so Agda confirms that the name proved legal is
+-- the name transcribed above.
 ${prefix}-package-legal : LegalIdent ${prefix}Package
 ${prefix}-package-legal =
-  legal-stop {x = '${first}'} {xs = ${prefix}PackageTail}
-    ${prefix}-package-start ${prefix}-package-tail-charset
+  legal-stop {headChar = '${first}'} {tailChars = ${prefix}PackageTail}
+    ${prefix}-package-start ${prefix}-package-tail-charset refl
 EOF
 }
 
@@ -394,11 +395,15 @@ retired-name${n}-illegal-char : Any (IsChar '${target}') retiredName${n}
 retired-name${n}-illegal-char = ${witness}
 
 -- Therefore this name is not a legal Julia identifier, and no package could ever
--- have carried it.
+-- have carried it. By projection and composition rather than a pattern match on
+-- legal-stop: see the comment on LegalIdent in IdentifierCharset.agda for the
+-- coverage problem that avoids, which CI reported twice before this formulation.
 retired-name${n}-not-legal-ident : ¬ (LegalIdent retiredName${n})
-retired-name${n}-not-legal-ident (legal-stop start-witness charset-witness) =
+retired-name${n}-not-legal-ident legal =
   legal-ident-excludes ${word}-not-ident-char ${word}-not-ident-start
-    start-witness charset-witness retired-name${n}-illegal-char
+    (LegalIdent.start legal) (LegalIdent.charset legal)
+    (subst (Any (IsChar '${target}')) (sym (LegalIdent.shape legal))
+      retired-name${n}-illegal-char)
 EOF
   done <"$register"
 

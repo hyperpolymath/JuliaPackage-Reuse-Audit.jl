@@ -76,7 +76,7 @@ module IdentifierCharset where
 open import Agda.Builtin.Char     using (Char)
 open import Agda.Builtin.List     using (List; []; _∷_)
 open import Agda.Builtin.Equality using (_≡_; refl)
-open import PackageNaming using (⊥; ¬_; subst; _++_; jlSuffix; repoNameOf)
+open import PackageNaming using (⊥; ¬_; sym; subst; _++_; jlSuffix; repoNameOf)
 
 -- Characters that may appear anywhere in a Julia identifier.
 data IdentChar : Char -> Set where
@@ -108,10 +108,29 @@ data AllIdentChars : List Char -> Set where
            -> IdentChar x -> AllIdentChars xs -> AllIdentChars (x ∷ xs)
 
 -- A legal Julia package name: non-empty, legal first character, legal characters
--- throughout the tail.
-data LegalIdent : List Char -> Set where
-  legal-stop : {x : Char} {xs : List Char}
-             -> IdentStart x -> AllIdentChars xs -> LegalIdent (x ∷ xs)
+-- throughout the tail, and an equation tying the two to the name itself.
+--
+-- A RECORD, not a data type, and Agda's coverage checker is the reason. Any
+-- function that consumes a LegalIdent and also has to split an Any ends up with
+-- an IdentStart field whose index is still a variable, and Agda then splits that
+-- field into all 53 of its constructors and reports the clause set as incomplete
+-- — one missing case per possible leading character. Two successive data-type
+-- formulations hit exactly this, and CI named both:
+--
+--   Incomplete pattern matching for legal-ident-excludes. Missing cases:
+--     legal-ident-excludes x x₁ (legal-stop sA x₂) (any-here x₃)
+--     legal-ident-excludes x x₁ sA x₂ (any-here x₃)
+--
+-- Splitting the list argument first did not help. Projections do not case-split,
+-- so with a record the same reasoning goes through with no patterns at all.
+record LegalIdent (s : List Char) : Set where
+  constructor legal-stop
+  field
+    {headChar}  : Char
+    {tailChars} : List Char
+    start   : IdentStart headChar
+    charset : AllIdentChars tailChars
+    shape   : headChar ∷ tailChars ≡ s
 
 -- Existential over a list, used to point at an offending character.
 data Any {A : Set} (P : A -> Set) : List A -> Set where
@@ -124,7 +143,7 @@ IsChar c x = x ≡ c
 -- The two characters a repository name may contain that an identifier may not.
 -- Each refutation is an absurd pattern: Agda checks that no constructor of the
 -- indexed datatype has that character as its index, so these are decided by the
--- datatype above and not asserted.
+-- datatypes above and not asserted.
 hyphen-not-ident-char : ¬ (IdentChar '-')
 hyphen-not-ident-char ()
 
@@ -146,35 +165,27 @@ charset-excludes bad (x ∷ xs) (aic-cons ic ics) (any-here h) =
 charset-excludes bad (x ∷ xs) (aic-cons ic ics) (any-there a) =
   charset-excludes bad xs ics a
 
--- Consequently no legal identifier contains it, wherever it sits: a leading
--- occurrence is refuted by the leading-character rule, a later one by the charset
--- rule. This is what turns "the retired name could never have been a package
--- name" into a proof instead of an assertion.
---
--- The witnesses are taken as COMPONENTS (IdentStart x, AllIdentChars xs) rather
--- than as a LegalIdent (x ∷ xs), and CI is the reason. Matching the legal-stop
--- constructor against a variable head leaves IdentStart x with a variable index,
--- so Agda's coverage checker splits that field into all 53 of its constructors
--- before it will split the Any argument, and then reports the clause set as
--- incomplete — one missing case per leading character:
---
---   Incomplete pattern matching for legal-ident-excludes. Missing cases:
---     legal-ident-excludes x x₁ (.'A' ∷ s) (legal-stop sA x₂) (any-here x₃)
---     legal-ident-excludes x x₁ (.'B' ∷ s) (legal-stop sB x₂) (any-here x₃) ...
---
--- Splitting the list first did not help either: the case tree still reached the
--- IdentStart field before the Any argument. Taking the components removes the
--- question, because this lemma never matches legal-stop at all. Callers that hold
--- a concrete name — RetiredNames, generated from the naming register — match
--- legal-stop themselves, where the index is a literal list and the field types
--- come out concrete.
+-- Refuting an occurrence in a cons: refute the head and refute the tail. This is
+-- the only place an Any is matched, and it is matched alone — no indexed witness
+-- sits beside it in the telescope for Agda to split first.
+any-cons-elim : {c : Char} {x : Char} {xs : List Char}
+              -> ¬ (IsChar c x) -> ¬ (Any (IsChar c) xs)
+              -> ¬ (Any (IsChar c) (x ∷ xs))
+any-cons-elim notHere _ (any-here h) = notHere h
+any-cons-elim _ notThere (any-there a) = notThere a
+
+-- Consequently no legal identifier contains an illegal character, wherever it
+-- sits: a leading occurrence is refuted by the leading-character rule, a later
+-- one by the charset rule. This is what turns "the retired name could never have
+-- been a package name" into a proof instead of an assertion. Defined by
+-- composition, with no pattern matching and therefore no case tree to get wrong.
 legal-ident-excludes : {c : Char} -> ¬ (IdentChar c) -> ¬ (IdentStart c)
                      -> {x : Char} {xs : List Char}
-                     -> IdentStart x -> AllIdentChars xs -> Any (IsChar c) (x ∷ xs) -> ⊥
-legal-ident-excludes badChar badStart st w (any-here h) =
-  badStart (subst IdentStart h st)
-legal-ident-excludes badChar badStart st w (any-there a) =
-  charset-excludes badChar _ w a
+                     -> IdentStart x -> AllIdentChars xs
+                     -> ¬ (Any (IsChar c) (x ∷ xs))
+legal-ident-excludes badChar badStart st w =
+  any-cons-elim (λ h -> badStart (subst IdentStart h st))
+                (charset-excludes badChar xs w)
 
 -- The '.' of the ".jl" suffix occurs in any name of the form cs ++ ".jl".
 suffix-has-dot : (cs : List Char) -> Any (IsChar '.') (cs ++ jlSuffix)
@@ -184,11 +195,12 @@ suffix-has-dot (c ∷ cs) = any-there (suffix-has-dot cs)
 -- Therefore no repository-form name is a legal Julia identifier, for any package
 -- name whatsoever. A repository name cannot be the name of the package it holds,
 -- and the pair of names has to be reconciled by rule rather than by being made
--- identical.
+-- identical. Again by projection and composition, with no patterns.
 repo-form-not-legal-ident : (pkg : List Char) -> ¬ (LegalIdent (repoNameOf pkg))
-repo-form-not-legal-ident [] (legal-stop st w) = dot-not-ident-start st
-repo-form-not-legal-ident (c ∷ cs) (legal-stop st w) =
-  charset-excludes dot-not-ident-char (cs ++ jlSuffix) w (suffix-has-dot cs)
+repo-form-not-legal-ident pkg legal =
+  legal-ident-excludes dot-not-ident-char dot-not-ident-start
+    (LegalIdent.start legal) (LegalIdent.charset legal)
+    (subst (Any (IsChar '.')) (sym (LegalIdent.shape legal)) (suffix-has-dot pkg))
 BODY
 } >"$out.tmp"
 

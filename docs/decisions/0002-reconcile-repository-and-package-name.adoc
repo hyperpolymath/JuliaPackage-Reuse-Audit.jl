@@ -1,0 +1,180 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+// SPDX-FileCopyrightText: 2026 Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
+= 2. Reconcile the repository name with the package name
+
+Date: 2026-10-04
+
+Issue: https://github.com/hyperpolymath/JuliaPackageSpitter.jl/issues/68[#68]
+
+== Status
+
+Accepted. Decided by the repository owner on 2026-10-04 after the direction was
+put to them explicitly: rename the repository to the package name, not the
+package to the repository name.
+
+== Context
+
+The repository was named `JuliaPackage-Reuse-Audit.jl`. Everything else about it
+said something different:
+
+[cols="1,2,2",options="header"]
+|===
+| Surface | What it said | Where
+
+| Repository name
+| `JuliaPackage-Reuse-Audit.jl`
+| github.com/hyperpolymath
+
+| Repository description
+| "A Julia package scaffolder that generates reusable repository structure, CI
+profiles, documentation and test skeletons, with optional ABI/FFI starter files"
+| GitHub `description` field
+
+| Package name
+| `JuliaPackageSpitter`
+| `Project.toml:1`
+
+| Entry document
+| "an automated scaffolding tool that implements the 'Reuse vs. Remake'
+philosophy"
+| `README.adoc`, Overview
+
+| Registry
+| package `JuliaPackageSpitter`, uuid `772df90b-…`, `repo =` pointing at the
+audit-named repository
+| `julia-professional-registry/J/JuliaPackageSpitter/Package.toml`
+
+| Code
+| `src/generator.jl` scaffolds; there is no audit code in `src/`
+| this repository
+
+| The audit itself
+| "Automated 'Reuse Audit' (scans existing repo for compliance)" listed as
+planned, unchecked
+| `ROADMAP.adoc`, v0.3.0
+|===
+
+So the description above followed the documented scaffolding functionality, and
+the repository name was the outlier: it advertised a capability that is roadmap
+work three minor versions away.
+
+=== The argument that settled the direction
+
+`JuliaPackage-Reuse-Audit` is not a legal Julia identifier. A hyphen cannot
+appear in a module name, so no Julia package could ever have been called after
+this repository without a transformation of the name — which means the two names
+could never have agreed in the first place, and the disagreement was structural
+rather than accidental. `JuliaPackageSpitter` is a legal identifier, is already
+the registered package name, and is already what the code, the README and the
+repository description describe.
+
+That argument is now a proof rather than a paragraph: see
+`proofs/agda/RetiredNames.agda`, which shows each retired name is not a
+`LegalIdent`, and `proofs/agda/IdentifierCharset.agda`, where `IdentChar` has no
+constructor for `-`.
+
+=== Defects found while gathering the evidence
+
+The naming mismatch was not the only claim the repository could not support, and
+the same change corrects them, because a gate that checks names while the
+documents around them overclaim would be checking the least interesting part:
+
+. `src/JuliaPackageSpitter.jl`'s docstring described a "reuse auditing tool" with
+  "Cross-package reuse pattern detection". No such code existed.
+. The README's Quick Start called `generate_package(name = …, domain_summary = …,
+  ci_profile = :strict, ffi_enabled = true)`. The real signature is
+  `generate_package(spec::PackageSpec, target_dir::String)` with a positional
+  `PackageSpec`; the documented call raises `MethodError`.
+. The README offered "CI Profiles: choose between `minimal`, `standard` and
+  `strict` quality gate configurations", and `ROADMAP.adoc` ticked the standard
+  profile as done. `spec.ci_profile` is stored and never read.
+. The README offered "Optional generation of Idris2 ABI and Zig FFI skeletons".
+  `generate_package` creates the directories `ffi/zig` and `src/abi` and writes
+  no file into them.
+. `PROOF-PROGRESS.adoc` declared itself a placeholder while `ffi/` and
+  `ABI-FFI-README.adoc` advertised a verified ABI surface.
+. `ffi/zig/test/integration_test.zig` declared `extern fn
+  juliapackage-reuse-audit_init()`. Hyphens are not legal in Zig or C
+  identifiers, so that file could not compile under any name; the rename to a
+  `juliapackagespitter_` prefix fixes it.
+. The estate's CI/CD catalogue offers `actions/proof-runner-check`, which
+  `cicd-suite`'s own README classifies as *Enforcing* ("Can fail. A green tick
+  means something."). Its body is a commented-out `idris2 --typecheck` line, a
+  "Stubs for future implementation" comment for Lean/Coq/Agda, and an
+  unconditional success message. Wiring it here would have installed a gate that
+  cannot fail.
+
+== Decision
+
+. *Rename the repository to `JuliaPackageSpitter.jl`.* The package name, its
+   UUID and the registry entry do not move. GitHub redirects the old URL, so
+   nothing breaks in flight; the redirect is a courtesy, not a plan, and the
+   references inside this repository are updated rather than left to it.
+
+. *Register the retired names.* `docs/naming/retired-names.txt` lists
+   `JuliaPackage-Reuse-Audit.jl`, `JuliaPackage-Reuse-Audit` and
+   `juliapackage-reuse-audit`. `docs/naming/retired-names-allowlist.txt` lists
+   the only files allowed to mention them — the changelog, this ADR, the register
+   and the generated proof module — each with a reason. Reintroducing a retired
+   name anywhere else fails CI.
+
+. *Encode the naming rule as a proof and gate it.* The rule is
+   `repository name = package name ++ ".jl"`. `proofs/agda/PackageNaming.agda`
+   proves the map injective, its witness prefix-unique (so the package name a
+   repository name recovers is well-defined), the round trip the identity, and
+   the map *not* the identity. `.github/workflows/proof-gates.yml` applies those
+   results to live repository state on every pull request, under a job named for
+   its consequence per `standards/docs/CICD-SIGNAL-DISCIPLINE.adoc`:
+   `🔴 GATE: Package identity (Agda-proved)`.
+
+. *Make the documents say what the code does.* The module docstring, the README's
+   capability list and its Quick Start, `ROADMAP.adoc`'s ticked boxes and
+   `PROOF-PROGRESS.adoc` are corrected. Where a capability is planned, it is
+   labelled planned. The Quick Start becomes `examples/quickstart.jl`, a file the
+   test suite executes and compares against the README byte for byte.
+
+. *Do not wire the catalogue stub.* The gate in this repository runs Agda for
+   real, in a digest-pinned container, with the prover's version asserted, and it
+   fails when the prover is missing. `cicd-suite` gets an issue instead.
+
+== Consequences
+
+=== Positive
+
+* One name for one thing. A search result, a `Pkg.add`, a clone URL and a
+  citation now all say `JuliaPackageSpitter`.
+* The agreement is enforced, not remembered. Renaming either side without the
+  other turns CI red, and the negative controls in `tests/reject/` and
+  `tests/check-identity-fixtures.sh` demonstrate that the gate can fail.
+* The Zig/C symbol prefix becomes a legal identifier.
+* The documents stop overclaiming, and the quick start is executed on every test
+  run rather than being a snippet nobody has compiled since it was written.
+
+=== Negative
+
+* `julia-professional-registry/J/JuliaPackageSpitter/Package.toml` still carries
+  `repo = "https://github.com/hyperpolymath/JuliaPackage-Reuse-Audit.jl.git"`.
+  The redirect covers it; the registry should not carry a retired name. Filed
+  against the registry.
+* Estate copies that mirror or cite this repository keep the old name:
+  `julia-ecosystem/packages/`, `verisimdb-data/scans/`,
+  `standards/docs/proofs/spec-templates/T3-standard/julia-pkg/`. Per
+  `standards/0-canon/CANONICAL-NAMES.adoc` the estate rule is *flag, don't fix*,
+  so these are reported rather than silently rewritten.
+* Existing clone URLs, container tags and toolbox names built from the old name
+  keep working through the redirect until somebody recreates them, which is how
+  the old name survives in shell histories.
+* Forks named after the old repository run this gate against their own name and
+  go red. That is the rule being applied honestly rather than a defect, and the
+  Julia-side test skips with a note when the owner is not `hyperpolymath`.
+
+=== Neutral
+
+* The package name, UUID, version and public API do not change. Nothing that
+  imports `JuliaPackageSpitter` is affected.
+* The gate is named `🔴 GATE:` but is not yet in the `Base` ruleset's
+  `required_status_checks`. Requiring it before it has reported once on the
+  default branch would create a phantom requirement, which the signal-discipline
+  standard forbids; the exact context string to require is recorded in the
+  workflow header. The `Base` ruleset also requires signed commits, which the
+  agent-side sandbox cannot produce, so the merge is the owner's.

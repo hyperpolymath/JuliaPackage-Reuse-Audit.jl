@@ -101,3 +101,9 @@ deps/
 .cache/
 build/
 dist/
+
+# Proof obligations generated at check time from live repository state
+# (scripts/gen-identity-agda.sh --mode live). Generated code lives in
+# generated/ only, per .machine_readable/MUST.contractile, and is never
+# committed: the whole point is that it is transcribed from live state.
+/generated/agda/

@@ -1,0 +1,148 @@
+# SPDX-License-Identifier: MPL-2.0
+# SPDX-FileCopyrightText: 2026 Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
+# This workflow is managed by gh actions-lock.
+#
+# proof-gates.yml — the package identity gate.
+#
+# WHAT IT GATES
+#
+#   repository name  =  package name ++ ".jl"
+#
+# That invariant is proved in Agda (proofs/agda/PackageNaming.agda: the map is
+# injective, its witness is prefix-unique so the recovered package name is
+# well-defined, the round trip is the identity, and the map is not the identity —
+# which is why the two names can drift at all) and applied to live repository
+# state at check time (generated/agda/LiveIdentity.agda, transcribed from
+# Project.toml and $GITHUB_REPOSITORY by scripts/gen-identity-agda.sh). The
+# reconciliation obligation is discharged by `refl`, so it is Agda's evaluator
+# that decides whether this repository's two names agree, not the script that
+# read them.
+#
+# WHY IT IS SHAPED LIKE THIS
+#
+# Fail-closed throughout, per standards/docs/CICD-SIGNAL-DISCIPLINE.adoc §4: a
+# check that cannot fail is worse than no check, because it reports green and is
+# counted as coverage. Therefore
+#
+#   * no Agda      -> the job fails. Nothing here skips when the prover is
+#                     missing, and the version is pinned and asserted before any
+#                     gate runs, so "agda was there but not the agda we proved
+#                     with" is also a failure;
+#   * no generated live module -> the proof section fails rather than checking
+#                     less than it claims;
+#   * negative controls (tests/reject/) must be REJECTED with Agda's type-error
+#                     status and the expected diagnostic, so a fixture cannot
+#                     count as a rejection by failing to parse;
+#   * the scanners themselves are self-tested (tests/check-identity-fixtures.sh,
+#                     tests/check-trusted-base-fixtures.sh) against trees that
+#                     must be rejected and one that must be accepted, so a
+#                     vacuous checker cannot report green;
+#   * the trusted base is budgeted at zero and the budget is checked
+#                     (scripts/check-agda-trusted-base.sh).
+#
+# All sections run and all results are reported: scripts/proof-gate.sh does not
+# stop at the first failure, so one run shows every defect.
+#
+# TIER
+#
+# 🔴 GATE: — always blocks. It is not yet in the `Base` ruleset's
+# required_status_checks, and adding it before it has reported once on the
+# default branch would create a phantom requirement (invariant 3 of the same
+# standard). The exact context string to require once this has merged to main is:
+#
+#     Proof Gates / 🔴 GATE: Package identity (Agda-proved)
+#
+# This gate has failed for real: the run recorded in issue #68 went red on the
+# actual mismatch it exists to prevent, before the repository was renamed. That
+# satisfies invariant 5 (every gate has failed at least once in its lifetime)
+# with evidence rather than an annotation.
+
+name: Proof Gates
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Read-only check workflow: cancelling a superseded run is always safe and keeps
+# the shared account-wide Actions concurrency pool free.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  LANG: C.UTF-8
+  LC_ALL: C.UTF-8
+
+jobs:
+  identity-gate:
+    name: "🔴 GATE: Package identity (Agda-proved)"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    # Digest-pinned, and the same image the estate's other Agda gates run in
+    # (epistemic-types .github/workflows/agda.yml, firmboot
+    # .github/workflows/verify.yml). No sudo inside, so apt-get runs directly.
+    container:
+      image: debian:13-slim@sha256:d7e12182ce18b85b93007c1dedf31f2d29e01ccf3182cc4017c709b6259bc132
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Install Agda, pinned (fail-closed)
+        run: |
+          set -euo pipefail
+          apt-get update
+          apt-get install --no-install-recommends -y \
+            ca-certificates git bash coreutils grep sed findutils \
+            agda-bin=2.6.4.3-1+b2
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Assert the pinned Agda version
+        run: |
+          set -euo pipefail
+          actual="$(agda --version)"
+          expected='Agda version 2.6.4.3'
+          if [ "$actual" != "$expected" ]; then
+            printf 'FAIL: expected %s, got %s. The proofs are gated against a specific\n' "$expected" "$actual" >&2
+            printf '      Agda; a different one is a different trusted base.\n' >&2
+            exit 1
+          fi
+          printf '%s\n' "$actual"
+
+      - name: Record the provenance of the values being proved about
+        run: |
+          set -euo pipefail
+          printf 'repository (from GITHUB_REPOSITORY): %s\n' "${GITHUB_REPOSITORY##*/}"
+          printf 'ref:        %s\n' "$GITHUB_REF"
+          printf 'commit:     %s\n' "$GITHUB_SHA"
+          printf 'package (from Project.toml):        %s\n' \
+            "$(awk '/^[[:space:]]*\[/ { exit } /^[[:space:]]*name[[:space:]]*=/ { if (match($0, /"[^"]*"/)) { print substr($0, RSTART + 1, RLENGTH - 2); exit } }' Project.toml)"
+          printf 'proof modules: %s\n' "$(find proofs/agda -name '*.agda' | wc -l)"
+          printf 'rejection controls: %s\n' "$(find tests/reject -name '*.agda' | wc -l)"
+
+      - name: Run every gate section (no skips)
+        run: |
+          set -uo pipefail
+          bash scripts/proof-gate.sh --repo-name "${GITHUB_REPOSITORY##*/}"
+
+      - name: Retain the gate transcript as evidence
+        if: always()
+        run: |
+          set -uo pipefail
+          {
+            printf '## Package identity gate — transcript pointers\n\n'
+            printf '* Agda: `%s`\n' "$(agda --version 2>/dev/null || printf 'not installed')"
+            printf '* repository name observed: `%s`\n' "${GITHUB_REPOSITORY##*/}"
+            printf '* live identity module: `%s`\n' \
+              "$(ls -l generated/agda/LiveIdentity.agda 2>/dev/null || printf 'not generated')"
+            printf '* sections and verdicts are in the log above; the gate does not stop at\n'
+            printf '  the first failure, so every defect appears in one run.\n'
+          } >>"$GITHUB_STEP_SUMMARY"

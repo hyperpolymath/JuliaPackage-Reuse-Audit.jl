@@ -217,3 +217,10 @@ using Test
         @test isfile(joinpath(tmp_idem, "Project.toml"))
     end
 end
+
+# Package identity: the name in Project.toml, the module that loads, the source
+# filename, the test wiring, the repository name and the documented quick start
+# must all describe the same package. The quick start is executed here, so the
+# README cannot drift from something that runs. See issue #68 and
+# tests/check-identity.sh for the shell-side twin of these checks.
+include("identity.jl")

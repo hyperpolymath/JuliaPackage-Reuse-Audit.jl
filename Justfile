@@ -283,15 +283,13 @@ clean-all: clean
 # ═══════════════════════════════════════════════════════════════════════════════
 
 # Run all tests
+#
+# This recipe used to be a template stub that printed "Tests passed!" without
+# running anything — a check that cannot fail, which is worse than no check.
+# It runs the real Julia test suite now, including test/identity.jl.
 test *args:
     @echo "Running tests..."
-    # TODO: Replace with your test command
-    # Examples:
-    #   cargo test {{args}}
-    #   mix test {{args}}
-    #   zig build test {{args}}
-    #   deno test {{args}}
-    @echo "Tests passed!"
+    julia --project=. -e 'using Pkg; Pkg.instantiate(); Pkg.test()'
 
 # Run tests with verbose output
 test-verbose:
@@ -302,6 +300,24 @@ test-verbose:
 test-smoke:
     @echo "Smoke test..."
     # TODO: Add basic sanity checks
+
+# Run the package identity gate: Agda proofs, rejection controls, trusted-base
+# budget, and the mechanical identity checks, each with its own self-test.
+# Fail-closed: without agda on PATH this fails rather than skipping.
+proofs:
+    bash scripts/proof-gate.sh
+
+# The gate sections that need no prover, so the mechanical half can be run
+# anywhere. The Agda sections are not skipped silently — they are not selected.
+proofs-lite:
+    bash scripts/proof-gate.sh --section identity --section committed-generator-drift --section trusted-base --section trusted-base-self-test --section identity-self-test
+
+# Regenerate the committed Agda modules (character rule, decided identity,
+# retired names) after changing Project.toml or the naming register.
+proofs-gen:
+    bash scripts/gen-identifier-charset.sh
+    bash scripts/gen-identity-agda.sh --mode canonical
+    bash scripts/gen-identity-agda.sh --mode retired
 
 # Run all quality checks
 quality: fmt-check lint test

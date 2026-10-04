@@ -1,67 +1,259 @@
-link:TOPOLOGY.md[image:https://img.shields.io/badge/Project-Topology-9558B2[Topology]]
-link:TOPOLOGY.md[image:https://img.shields.io/badge/Completion-90%25-green[90]]
-https://www.bestpractices.dev/en/projects/new?repo_url=https://github.com/hyperpolymath/JuliaPackage-Reuse-Audit.jl[image:https://img.shields.io/badge/OpenSSF-Best_Practices-green?logo=opensourcesecurity[OpenSSF
-Best Practices]]
-https://www.mozilla.org/MPL/2.0/[image:https://img.shields.io/badge/License-MPL--2.0-blue.svg[License:
-MPL-2.0]] image:Julia
+// SPDX-License-Identifier: MPL-2.0
+// SPDX-FileCopyrightText: 2026 Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
+= JuliaPackageSpitter.jl
+:toc: macro
+:toclevels: 2
 
-*Standardized Package Scaffolding for the Hyperpolymath Ecosystem*
+image:https://img.shields.io/badge/Julia-1.10%2B-9558B2?logo=julia[Julia 1.10+]
+image:https://img.shields.io/badge/License-MPL--2.0-blue.svg[License: MPL-2.0,link=LICENSE]
+image:https://img.shields.io/badge/Roadmap-v0.1.0-informational[Roadmap,link=ROADMAP.adoc]
+image:https://img.shields.io/badge/Topology-documented-9558B2[Topology,link=TOPOLOGY.adoc]
 
-_Generate production-ready Julia package skeletons where you only fill
-the domain gaps._
+*Standardised package scaffolding for the Hyperpolymath ecosystem.*
 
-[[toc]]
+_Generate a Julia package skeleton in which only the domain gaps are left to
+fill._
+
+toc::[]
+
+== Naming
+
+The repository is `JuliaPackageSpitter.jl`. The package inside it is
+`JuliaPackageSpitter`. The relationship between those two names is a rule, not a
+coincidence and not a memory:
+
+[source,text]
+----
+repository name  =  package name ++ ".jl"
+----
+
+That rule is proved in `proofs/agda/PackageNaming.agda`: the map is injective,
+its `.jl` witness is prefix-unique (so the package name a repository name
+recovers is well-defined and does not depend on which witness is supplied), the
+round trip is the identity, and the map is *not* the identity — which is precisely
+why the two names can drift apart and why their agreement has to be checked
+rather than assumed.
+
+It is re-applied to live repository state on every pull request by the
+`🔴 GATE: Package identity` job in `.github/workflows/proof-gates.yml`, which
+transcribes the package name from `Project.toml` and the repository name from
+`$GITHUB_REPOSITORY` into generated Agda, and lets Agda's evaluator decide
+whether they agree. Run it locally with `just proofs` or
+`bash scripts/proof-gate.sh`.
+
+This repository used to be named after a "reuse audit" capability that is still
+unimplemented roadmap work (`ROADMAP.adoc`, v0.3.0). That name is retired. It is
+registered in `docs/naming/retired-names.txt`, proved in
+`proofs/agda/RetiredNames.agda` never to have been a legal Julia package name (a
+hyphen is not an identifier character, so no module could ever have carried it),
+and the decision with its evidence is recorded in
+`docs/decisions/0002-reconcile-repository-and-package-name.adoc`.
 
 == Overview
 
-JuliaPackageSpitter.jl is an automated scaffolding tool that implements
-the "`Reuse vs. Remake`" philosophy for Julia packages. It handles 80%+
-of the boilerplate required for production-grade repos—including CI,
-quality gates, docs skeletons, and ABI/FFI adapters—allowing developers
-and LLMs to focus purely on domain models and core algorithms.
+`JuliaPackageSpitter` scaffolds a Julia package directory tree from a
+five-field specification: package name, domain summary, authors, CI profile and
+an FFI flag. It writes the files that every package in the estate needs in the
+same shape, so the work left for a human or an LLM is the domain model.
 
-== The "`Reuse vs. Remake`" Philosophy
+It is a scaffolder. It does not audit existing repositories, does not analyse
+reuse patterns across packages, and does not modify anything outside the target
+directory you give it.
 
-* *Reuse Heavily*: Scaffolding, CI workflows, release playbooks, test
-harness patterns, ABI/FFI adapters.
-* *Remake Per Package*: Domain entities, safety invariants, core
-algorithms, public API semantics.
+== The "Reuse vs. Remake" philosophy
 
-== Core Capabilities
+* *Reuse heavily*: repository layout, project metadata, documentation skeleton,
+  the agent handoff brief.
+* *Remake per package*: domain entities, safety invariants, core algorithms,
+  public API semantics.
 
-* *Full Directory Generation*: Creates `+src+`, `+test+`, `+docs+`, and
-`+.github/workflows+` in seconds.
-* *Smart Templating*: Boilerplate files include "`TODO`" anchors ONLY in
-domain-specific sections.
-* *CI Profiles*: Choose between `+minimal+`, `+standard+`, and
-`+strict+` quality gate configurations.
-* *LLM Handoff*: Generates a pre-filled brief (`+SONNET-TASKS.md+`)
-ready for an AI agent to begin implementation.
-* *FFI Ready*: Optional generation of Idris2 ABI and Zig FFI skeletons.
+== What it generates
 
-== Quick Start
+Given `PackageSpec(name, domain_summary, authors, ci_profile, ffi_enabled)` and a
+target directory, `generate_package` creates:
+
+[cols="1,2",options="header"]
+|===
+| Path | Contents
+
+| `src/`, `test/`, `docs/`, `scripts/`, `contractiles/`, `.github/workflows/`,
+`.machine_readable/`
+| Directories, created empty.
+
+| `Project.toml`
+| Rendered from the spec: name, a fresh UUID, authors, version `0.1.0`,
+`julia = "1.10"` compatibility.
+
+| `src/<Name>.jl`
+| Module skeleton carrying the domain summary as a comment.
+
+| `README.adoc`
+| Rendered from `templates/base/README.adoc.tpl`.
+
+| `SONNET-TASKS.md`
+| The agent handoff brief, rendered from
+`templates/base/SONNET-TASKS.md.tpl`.
+
+| `ffi/zig/`, `src/abi/`
+| Directories only, and only when `ffi_enabled` is true.
+|===
+
+`generate_package` returns a completion message and prints progress; it does not
+throw on an existing target directory, so re-running it overwrites the files it
+generates and leaves anything else in place.
+
+== Quick start
+
+The snippet below is `examples/quickstart.jl`, reproduced verbatim. It is not a
+transcription somebody typed once: `test/identity.jl` fails if this block and
+that file differ by a single character, and then executes the file and asserts on
+what it returns.
 
 [source,julia]
 ----
 using JuliaPackageSpitter
 
-# Scaffold a new safety-critical package
-generate_package(
-    name = "NuclearSafety.jl",
-    domain_summary = "Core cooling logic for SMR reactors",
-    ci_profile = :strict,
-    ffi_enabled = true
+# What to scaffold: package name, domain summary, authors, CI profile, FFI flag.
+# PackageSpec takes these positionally — there is no keyword constructor.
+spec = PackageSpec(
+    "NuclearSafety",
+    "Core cooling logic for SMR reactors",
+    ["Jonathan D.A. Jewell"],
+    :standard,
+    false
 )
+
+# Scaffold into a temporary directory, so this file runs anywhere and leaves
+# nothing behind. generate_package returns its completion message.
+mktempdir() do dir
+    generate_package(spec, dir)
+end
 ----
 
-== Success Criteria
+Install from the estate registry:
 
-* *Speed*: New package scaffolded in under 2 minutes.
-* *Consistency*: 80%+ non-domain files are generated identical to
-ecosystem standards.
-* *Ease of Implementation*: LLMs can implement the first domain module
-from the generated brief without extra prompting.
+[source,julia]
+----
+using Pkg
+Pkg.Registry.add(url = "https://github.com/hyperpolymath/julia-professional-registry")
+Pkg.add("JuliaPackageSpitter")
+----
+
+== Limits, stated plainly
+
+These are recorded so that nobody has to read the source to find them, and each
+one has an issue or a roadmap entry behind it:
+
+* `ci_profile` is accepted and stored, and then never read. The generated
+  `.github/workflows/` directory is empty: no profile currently produces
+  workflow files. Selection between `:minimal`, `:standard` and `:strict` is
+  roadmap work, not a feature.
+* `ffi_enabled` creates `ffi/zig/` and `src/abi/` and nothing else. No Idris2 ABI
+  module and no Zig skeleton is written. `ABI-FFI-README.adoc` describes the
+  intended shape of that surface; it is a design document, not a description of
+  generated output.
+* The generated `Project.toml` declares a dependency on `Dates` that the
+  generated source does not use, and no `LICENSE` file is written even though the
+  generated `README.adoc` refers to one.
+* `templates/base/SONNET-TASKS.md.tpl` tells the receiving agent to consult
+  `src/types.jl`, which the generator never creates.
+* The reuse audit that the repository was originally named after does not exist.
+  It is `ROADMAP.adoc` v0.3.0.
+* `PackageSpec` is exported under the same name as `Pkg.Types.PackageSpec`. In a
+  session that loads both, one shadows the other. Renaming it is a breaking
+  change and is tracked separately rather than done here.
+
+== The identity gate
+
+`scripts/proof-gate.sh` runs nine sections and reports all of them; it does not
+stop at the first failure, and no section is allowed to skip.
+
+[cols="1,2",options="header"]
+|===
+| Section | What it establishes
+
+| `toolchain`
+| A prover exists. A missing Agda fails the gate rather than skipping it.
+
+| `identity`
+| `Project.toml`, the `module` declaration, the source filename, the test wiring,
+the README, the repository name, the self-reference URLs and the retired-name
+register all describe one package.
+
+| `live-identity`
+| Live state is transcribed into `generated/agda/LiveIdentity.agda`.
+
+| `committed-generator-drift`
+| The committed generated Agda modules still match their generators, so the data
+cannot be edited by hand behind the generator's back.
+
+| `proofs`
+| Every module under `proofs/agda/`, plus the generated live module, typechecks
+under `--safe --without-K --double-check --ignore-interfaces -W error`.
+
+| `rejections`
+| Every false claim under `tests/reject/` is rejected with Agda's type-error
+status *and* the expected diagnostic, so a fixture cannot count as a rejection by
+failing to parse.
+
+| `trusted-base`
+| Zero axioms, zero holes, zero disabled checks. The budget is 0 and it is
+enforced, not declared.
+
+| `trusted-base-self-test`
+| The axiom scanner is verified in both directions: a file that mentions the
+banned words in comments passes, four files that really violate the discipline
+are flagged.
+
+| `identity-self-test`
+| The mechanical checker accepts one consistent tree and rejects fourteen trees
+each broken in exactly one way.
+|===
+
+The trusted base is Agda's builtin modules and nothing else: no standard library,
+no axioms, no holes, no termination or positivity overrides, no rewriting. See
+`proofs/TRUSTED-BASE.adoc` for what that costs and what it buys, and
+`proofs/agda/README.adoc` for what each theorem means and — equally important —
+what is checked mechanically rather than proved.
+
+== Development
+
+[source,bash]
+----
+git clone https://github.com/hyperpolymath/JuliaPackageSpitter.jl
+cd JuliaPackageSpitter.jl
+julia --project=. -e 'using Pkg; Pkg.instantiate(); Pkg.test()'
+just proofs        # the identity gate; needs agda, fails closed without it
+----
+
+== Goals
+
+Aspirations, not measurements. Nothing here is currently instrumented:
+
+* *Speed*: a new package scaffolded in well under two minutes.
+* *Consistency*: the non-domain files of a generated package match the estate's
+  shape without hand-editing.
+* *Handoff*: an agent can implement the first domain module from the generated
+  brief without further prompting.
+
+== Documentation map
+
+[cols="1,2",options="header"]
+|===
+| Document | What it is for
+
+| `ROADMAP.adoc` | What exists, what is planned, what is explicitly not planned.
+| `ARCHITECTURE.adoc` | Module structure and data flow.
+| `TOPOLOGY.adoc` | Where this package sits in the estate.
+| `EXPLAINME.adoc` | The long-form explanation of the design.
+| `ABI-FFI-README.adoc` | Design of the intended ABI/FFI surface (not generated).
+| `proofs/agda/README.adoc` | The proofs: what each one means and what it costs.
+| `proofs/TRUSTED-BASE.adoc` | What is trusted, and why the budget is zero.
+| `docs/decisions/` | Decision records, including the naming reconciliation.
+| `docs/naming/` | The retired-name register and its allowlist.
+|===
 
 == License
 
-Palimpsest-MPL-1.0 License - see LICENSE for details.
+Mozilla Public License 2.0 — see link:LICENSE[LICENSE]. Individual files carry
+SPDX headers; the repository is REUSE-compliant via `.reuse/dep5`.

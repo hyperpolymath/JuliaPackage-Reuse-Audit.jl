@@ -1,0 +1,24 @@
+# SPDX-License-Identifier: MPL-2.0
+# SPDX-FileCopyrightText: 2026 Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
+#
+# Exemptions for the estate Trusted-Base Reduction Policy scanner
+# (hyperpolymath/standards scripts/check-trusted-base.sh, wired as the
+# governance `trusted-base` job). Format: one path fragment per line; a line
+# whose first non-space character is '#' is a comment.
+#
+# Rationale, using the mechanism the policy itself provides for this case —
+# "test fixtures that exist to be detected by the scanner":
+#
+# tests/trusted-base-fixtures/ contains .agda files with real escape hatches in
+# them ON PURPOSE. No agda invocation in this repository is ever pointed at them;
+# they are not modules and are not typechecked. They exist so that
+# scripts/check-agda-trusted-base.sh can be demonstrated to have teeth in both
+# directions by tests/check-trusted-base-fixtures.sh — a file that mentions the
+# banned words in comments must pass, and files that really violate the
+# discipline must be flagged. A scanner that has never flagged anything has never
+# been shown to flag anything.
+#
+# Deliberately NOT exempt: proofs/agda/ (the real development) and tests/reject/
+# (the negative controls). Both are scanned by this repository's budget-zero gate
+# and by the estate policy, and both contain zero markers.
+tests/trusted-base-fixtures/

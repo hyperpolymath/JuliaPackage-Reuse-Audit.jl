@@ -261,9 +261,13 @@ ${prefix}-package-tail-charset = ${tail_witness}
 ${prefix}-package-charset : AllIdentChars ${prefix}Package
 ${prefix}-package-charset = aic-cons ${first_ctor} ${prefix}-package-tail-charset
 
--- Therefore the package name is a legal Julia identifier.
+-- Therefore the package name is a legal Julia identifier. The implicit arguments
+-- are given explicitly so that nothing here depends on Agda inferring the head
+-- character from the witness type.
 ${prefix}-package-legal : LegalIdent ${prefix}Package
-${prefix}-package-legal = legal-stop ${prefix}-package-start ${prefix}-package-tail-charset
+${prefix}-package-legal =
+  legal-stop {x = '${first}'} {xs = ${prefix}PackageTail}
+    ${prefix}-package-start ${prefix}-package-tail-charset
 EOF
 }
 
@@ -393,8 +397,8 @@ retired-name${n}-illegal-char = ${witness}
 -- have carried it.
 retired-name${n}-not-legal-ident : ¬ (LegalIdent retiredName${n})
 retired-name${n}-not-legal-ident legal =
-  legal-ident-excludes ${word}-not-ident-char ${word}-not-ident-start legal
-    retired-name${n}-illegal-char
+  legal-ident-excludes ${word}-not-ident-char ${word}-not-ident-start
+    retiredName${n} legal retired-name${n}-illegal-char
 EOF
   done <"$register"
 

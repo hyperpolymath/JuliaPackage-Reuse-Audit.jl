@@ -209,12 +209,21 @@ charset-excludes bad (x ∷ xs) (aic-cons ic ics) (any-there a) =
 -- occurrence is refuted by the leading-character rule, a later one by the
 -- charset rule. This is what turns "the retired name could never have been a
 -- package name" into a proof instead of an assertion.
+--
+-- The list is an explicit argument and is split BEFORE LegalIdent is. That
+-- ordering is load-bearing, and CI found it the hard way: matching legal-stop
+-- against a variable index does not determine the list, so Agda cannot then split
+-- the Any argument and reports the clause set as incomplete ("Missing cases:
+-- legal-ident-excludes x x₁ (legal-stop sA x₂) (any-here x₃) ...", one per
+-- IdentStart constructor). Splitting the list first makes the index concrete and
+-- both matches go through.
 legal-ident-excludes : {c : Char} -> ¬ (IdentChar c) -> ¬ (IdentStart c)
-                     -> {s : List Char} -> LegalIdent s -> ¬ (Any (IsChar c) s)
-legal-ident-excludes badChar badStart (legal-stop st w) (any-here h) =
+                     -> (s : List Char) -> LegalIdent s -> Any (IsChar c) s -> ⊥
+legal-ident-excludes badChar badStart [] ()
+legal-ident-excludes badChar badStart (x ∷ xs) (legal-stop st w) (any-here h) =
   badStart (subst IdentStart h st)
-legal-ident-excludes badChar badStart (legal-stop st w) (any-there a) =
-  charset-excludes badChar _ w a
+legal-ident-excludes badChar badStart (x ∷ xs) (legal-stop st w) (any-there a) =
+  charset-excludes badChar xs w a
 
 -- The '.' of the ".jl" suffix occurs in any name of the form cs ++ ".jl".
 suffix-has-dot : (cs : List Char) -> Any (IsChar '.') (cs ++ jlSuffix)

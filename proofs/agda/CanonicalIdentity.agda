@@ -49,9 +49,13 @@ canonical-package-tail-charset = aic-cons cu (aic-cons cl (aic-cons ci (aic-cons
 canonical-package-charset : AllIdentChars canonicalPackage
 canonical-package-charset = aic-cons cJ canonical-package-tail-charset
 
--- Therefore the package name is a legal Julia identifier.
+-- Therefore the package name is a legal Julia identifier. The implicit arguments
+-- are given explicitly so that nothing here depends on Agda inferring the head
+-- character from the witness type.
 canonical-package-legal : LegalIdent canonicalPackage
-canonical-package-legal = legal-stop canonical-package-start canonical-package-tail-charset
+canonical-package-legal =
+  legal-stop {x = 'J'} {xs = canonicalPackageTail}
+    canonical-package-start canonical-package-tail-charset
 
 -- Repository name: "JuliaPackageSpitter.jl", by the rule rather than by observation.
 canonicalRepo : List Char

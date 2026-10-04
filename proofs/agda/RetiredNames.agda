@@ -8,6 +8,13 @@
 -- here to be something a Julia package could never have been called, which is
 -- why it had to be retired rather than adopted.
 --
+-- The refutation goes through IdentifierCharset.charset-excludes with the name's
+-- tail given by name, or through the leading-character rule when the offending
+-- character is the first one. Matching legal-stop is safe at this call site and
+-- is not safe in a general lemma: here the index is a literal list from the
+-- register, so the witness types come out concrete and Agda has no variable index
+-- to split. See the comment in IdentifierCharset.agda.
+--
 -- The names in this module are transcribed by the generator; every obligation
 -- below is decided by Agda when the module is typechecked. A wrong name is a
 -- type error, not a warning.
@@ -26,57 +33,60 @@ open import IdentifierCharset
 retiredName1 : List Char
 retiredName1 = 'J' ∷ 'u' ∷ 'l' ∷ 'i' ∷ 'a' ∷ 'P' ∷ 'a' ∷ 'c' ∷ 'k' ∷ 'a' ∷ 'g' ∷ 'e' ∷ '-' ∷ 'R' ∷ 'e' ∷ 'u' ∷ 's' ∷ 'e' ∷ '-' ∷ 'A' ∷ 'u' ∷ 'd' ∷ 'i' ∷ 't' ∷ '.' ∷ 'j' ∷ 'l' ∷ []
 
--- The offending character, pointed at rather than searched for at runtime.
-retired-name1-illegal-char : Any (IsChar '-') retiredName1
-retired-name1-illegal-char = any-there (any-there (any-there (any-there (any-there (any-there (any-there (any-there (any-there (any-there (any-there (any-there (any-here refl))))))))))))
+-- The name without its first character.
+retiredName1Tail : List Char
+retiredName1Tail = 'u' ∷ 'l' ∷ 'i' ∷ 'a' ∷ 'P' ∷ 'a' ∷ 'c' ∷ 'k' ∷ 'a' ∷ 'g' ∷ 'e' ∷ '-' ∷ 'R' ∷ 'e' ∷ 'u' ∷ 's' ∷ 'e' ∷ '-' ∷ 'A' ∷ 'u' ∷ 'd' ∷ 'i' ∷ 't' ∷ '.' ∷ 'j' ∷ 'l' ∷ []
 
--- Therefore this name is not a legal Julia identifier, and no package could ever
--- have carried it. By projection and composition rather than a pattern match on
--- legal-stop: see the comment on LegalIdent in IdentifierCharset.agda for the
--- coverage problem that avoids, which CI reported twice before this formulation.
+-- The offending character, pointed at by position rather than searched for: it
+-- sits 12 characters into the name, so 11 into the tail.
+retired-name1-illegal-char : Any (IsChar '-') retiredName1Tail
+retired-name1-illegal-char = any-there (any-there (any-there (any-there (any-there (any-there (any-there (any-there (any-there (any-there (any-there (any-here refl)))))))))))
+
+-- Therefore the tail is not a list of legal identifier characters, and the name
+-- is not a legal Julia identifier: no package could ever have carried it.
 retired-name1-not-legal-ident : ¬ (LegalIdent retiredName1)
-retired-name1-not-legal-ident legal =
-  legal-ident-excludes hyphen-not-ident-char hyphen-not-ident-start
-    (LegalIdent.start legal) (LegalIdent.charset legal)
-    (subst (Any (IsChar '-')) (sym (LegalIdent.shape legal))
-      retired-name1-illegal-char)
+retired-name1-not-legal-ident (legal-stop start-witness charset-witness) =
+  charset-excludes {c = '-'} hyphen-not-ident-char retiredName1Tail
+    charset-witness retired-name1-illegal-char
 
 -- Retired name 2: "JuliaPackage-Reuse-Audit" (docs/naming/retired-names.txt)
 retiredName2 : List Char
 retiredName2 = 'J' ∷ 'u' ∷ 'l' ∷ 'i' ∷ 'a' ∷ 'P' ∷ 'a' ∷ 'c' ∷ 'k' ∷ 'a' ∷ 'g' ∷ 'e' ∷ '-' ∷ 'R' ∷ 'e' ∷ 'u' ∷ 's' ∷ 'e' ∷ '-' ∷ 'A' ∷ 'u' ∷ 'd' ∷ 'i' ∷ 't' ∷ []
 
--- The offending character, pointed at rather than searched for at runtime.
-retired-name2-illegal-char : Any (IsChar '-') retiredName2
-retired-name2-illegal-char = any-there (any-there (any-there (any-there (any-there (any-there (any-there (any-there (any-there (any-there (any-there (any-there (any-here refl))))))))))))
+-- The name without its first character.
+retiredName2Tail : List Char
+retiredName2Tail = 'u' ∷ 'l' ∷ 'i' ∷ 'a' ∷ 'P' ∷ 'a' ∷ 'c' ∷ 'k' ∷ 'a' ∷ 'g' ∷ 'e' ∷ '-' ∷ 'R' ∷ 'e' ∷ 'u' ∷ 's' ∷ 'e' ∷ '-' ∷ 'A' ∷ 'u' ∷ 'd' ∷ 'i' ∷ 't' ∷ []
 
--- Therefore this name is not a legal Julia identifier, and no package could ever
--- have carried it. By projection and composition rather than a pattern match on
--- legal-stop: see the comment on LegalIdent in IdentifierCharset.agda for the
--- coverage problem that avoids, which CI reported twice before this formulation.
+-- The offending character, pointed at by position rather than searched for: it
+-- sits 12 characters into the name, so 11 into the tail.
+retired-name2-illegal-char : Any (IsChar '-') retiredName2Tail
+retired-name2-illegal-char = any-there (any-there (any-there (any-there (any-there (any-there (any-there (any-there (any-there (any-there (any-there (any-here refl)))))))))))
+
+-- Therefore the tail is not a list of legal identifier characters, and the name
+-- is not a legal Julia identifier: no package could ever have carried it.
 retired-name2-not-legal-ident : ¬ (LegalIdent retiredName2)
-retired-name2-not-legal-ident legal =
-  legal-ident-excludes hyphen-not-ident-char hyphen-not-ident-start
-    (LegalIdent.start legal) (LegalIdent.charset legal)
-    (subst (Any (IsChar '-')) (sym (LegalIdent.shape legal))
-      retired-name2-illegal-char)
+retired-name2-not-legal-ident (legal-stop start-witness charset-witness) =
+  charset-excludes {c = '-'} hyphen-not-ident-char retiredName2Tail
+    charset-witness retired-name2-illegal-char
 
 -- Retired name 3: "juliapackage-reuse-audit" (docs/naming/retired-names.txt)
 retiredName3 : List Char
 retiredName3 = 'j' ∷ 'u' ∷ 'l' ∷ 'i' ∷ 'a' ∷ 'p' ∷ 'a' ∷ 'c' ∷ 'k' ∷ 'a' ∷ 'g' ∷ 'e' ∷ '-' ∷ 'r' ∷ 'e' ∷ 'u' ∷ 's' ∷ 'e' ∷ '-' ∷ 'a' ∷ 'u' ∷ 'd' ∷ 'i' ∷ 't' ∷ []
 
--- The offending character, pointed at rather than searched for at runtime.
-retired-name3-illegal-char : Any (IsChar '-') retiredName3
-retired-name3-illegal-char = any-there (any-there (any-there (any-there (any-there (any-there (any-there (any-there (any-there (any-there (any-there (any-there (any-here refl))))))))))))
+-- The name without its first character.
+retiredName3Tail : List Char
+retiredName3Tail = 'u' ∷ 'l' ∷ 'i' ∷ 'a' ∷ 'p' ∷ 'a' ∷ 'c' ∷ 'k' ∷ 'a' ∷ 'g' ∷ 'e' ∷ '-' ∷ 'r' ∷ 'e' ∷ 'u' ∷ 's' ∷ 'e' ∷ '-' ∷ 'a' ∷ 'u' ∷ 'd' ∷ 'i' ∷ 't' ∷ []
 
--- Therefore this name is not a legal Julia identifier, and no package could ever
--- have carried it. By projection and composition rather than a pattern match on
--- legal-stop: see the comment on LegalIdent in IdentifierCharset.agda for the
--- coverage problem that avoids, which CI reported twice before this formulation.
+-- The offending character, pointed at by position rather than searched for: it
+-- sits 12 characters into the name, so 11 into the tail.
+retired-name3-illegal-char : Any (IsChar '-') retiredName3Tail
+retired-name3-illegal-char = any-there (any-there (any-there (any-there (any-there (any-there (any-there (any-there (any-there (any-there (any-there (any-here refl)))))))))))
+
+-- Therefore the tail is not a list of legal identifier characters, and the name
+-- is not a legal Julia identifier: no package could ever have carried it.
 retired-name3-not-legal-ident : ¬ (LegalIdent retiredName3)
-retired-name3-not-legal-ident legal =
-  legal-ident-excludes hyphen-not-ident-char hyphen-not-ident-start
-    (LegalIdent.start legal) (LegalIdent.charset legal)
-    (subst (Any (IsChar '-')) (sym (LegalIdent.shape legal))
-      retired-name3-illegal-char)
+retired-name3-not-legal-ident (legal-stop start-witness charset-witness) =
+  charset-excludes {c = '-'} hyphen-not-ident-char retiredName3Tail
+    charset-witness retired-name3-illegal-char
 
 -- 3 retired name(s) refuted.

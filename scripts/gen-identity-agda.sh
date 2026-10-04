@@ -262,13 +262,12 @@ ${prefix}-package-charset : AllIdentChars ${prefix}Package
 ${prefix}-package-charset = aic-cons ${first_ctor} ${prefix}-package-tail-charset
 
 -- Therefore the package name is a legal Julia identifier. The head and tail are
--- bound explicitly and the shape equation is discharged by refl: both sides reduce
--- to the same list of characters, so Agda confirms that the name proved legal is
--- the name transcribed above.
+-- bound explicitly, so nothing here depends on Agda inferring either from a
+-- witness type.
 ${prefix}-package-legal : LegalIdent ${prefix}Package
 ${prefix}-package-legal =
-  legal-stop {headChar = '${first}'} {tailChars = ${prefix}PackageTail}
-    ${prefix}-package-start ${prefix}-package-tail-charset refl
+  legal-stop {x = '${first}'} {xs = ${prefix}PackageTail}
+    ${prefix}-package-start ${prefix}-package-tail-charset
 EOF
 }
 
@@ -352,14 +351,21 @@ EOF
 }
 
 emit_retired() {
-  local register="$1" n=0 name target witness word found_any=0
+  local register="$1" n=0 name target witness word found_any=0 first rest rest_witness pos
   [ -f "$register" ] || fail "%s does not exist" "$register"
   emit_header "RetiredNames" \
     "-- Regenerate with: bash scripts/gen-identity-agda.sh --mode retired
 -- Source of the data: docs/naming/retired-names.txt (one retired name per line;
 -- blank lines and lines beginning '#' are ignored). Each retired name is proved
 -- here to be something a Julia package could never have been called, which is
--- why it had to be retired rather than adopted."
+-- why it had to be retired rather than adopted.
+--
+-- The refutation goes through IdentifierCharset.charset-excludes with the name's
+-- tail given by name, or through the leading-character rule when the offending
+-- character is the first one. Matching legal-stop is safe at this call site and
+-- is not safe in a general lemma: here the index is a literal list from the
+-- register, so the witness types come out concrete and Agda has no variable index
+-- to split. See the comment in IdentifierCharset.agda."
 
   while IFS= read -r name || [ -n "$name" ]; do
     case "$name" in '' | '#'*) continue ;; esac
@@ -369,42 +375,68 @@ emit_retired() {
     require_repo_charset "$name" "retired name"
     n=$((n + 1))
     found_any=1
+
+    # Where is the first character that a Julia identifier may not contain?
     target=""
-    witness=""
-    for candidate in '-' '.'; do
-      if witness="$(any_char_witness "$name" "$candidate")"; then
-        target="$candidate"
-        break
-      fi
+    pos=-1
+    local i
+    for ((i = 0; i < ${#name}; i++)); do
+      case "${name:i:1}" in
+        [A-Za-z0-9_!]) continue ;;
+      esac
+      target="${name:i:1}"
+      pos="$i"
+      break
     done
     [ -n "$target" ] ||
       fail "retired name '%s' contains no character that is illegal in a Julia identifier, so no refutation can be generated; extend the generator rather than weakening the claim" "$name"
     case "$target" in
       '-') word="hyphen" ;;
       '.') word="dot" ;;
-      *) fail "no lemma name for illegal character '%s'" "$target" ;;
+      *) fail "no refutation lemma for the illegal character '%s' in retired name '%s'; IdentifierCharset.agda refutes '-' and '.' only, because those are the only characters a GitHub repository name may contain that a Julia identifier may not" "$target" "$name" ;;
     esac
+
+    first="${name:0:1}"
+    rest="${name:1}"
+
     cat <<EOF
 
 -- Retired name ${n}: "${name}" (docs/naming/retired-names.txt)
 retiredName${n} : List Char
 retiredName${n} = $(agda_chars "$name")
-
--- The offending character, pointed at rather than searched for at runtime.
-retired-name${n}-illegal-char : Any (IsChar '${target}') retiredName${n}
-retired-name${n}-illegal-char = ${witness}
-
--- Therefore this name is not a legal Julia identifier, and no package could ever
--- have carried it. By projection and composition rather than a pattern match on
--- legal-stop: see the comment on LegalIdent in IdentifierCharset.agda for the
--- coverage problem that avoids, which CI reported twice before this formulation.
-retired-name${n}-not-legal-ident : ¬ (LegalIdent retiredName${n})
-retired-name${n}-not-legal-ident legal =
-  legal-ident-excludes ${word}-not-ident-char ${word}-not-ident-start
-    (LegalIdent.start legal) (LegalIdent.charset legal)
-    (subst (Any (IsChar '${target}')) (sym (LegalIdent.shape legal))
-      retired-name${n}-illegal-char)
 EOF
+
+    if [ "$pos" -eq 0 ]; then
+      cat <<EOF
+
+-- The offending character is the first one, so the leading-character rule alone
+-- refutes the name: no constructor of IdentStart has '${target}' as its index.
+retired-name${n}-not-legal-ident : ¬ (LegalIdent retiredName${n})
+retired-name${n}-not-legal-ident (legal-stop start-witness charset-witness) =
+  ${word}-not-ident-start start-witness
+EOF
+    else
+      rest_witness="$(any_char_witness "$rest" "$target")" ||
+        fail "internal: '%s' not found in the tail of retired name '%s'" "$target" "$name"
+      cat <<EOF
+
+-- The name without its first character.
+retiredName${n}Tail : List Char
+retiredName${n}Tail = $(agda_chars "$rest")
+
+-- The offending character, pointed at by position rather than searched for: it
+-- sits ${pos} characters into the name, so $((pos - 1)) into the tail.
+retired-name${n}-illegal-char : Any (IsChar '${target}') retiredName${n}Tail
+retired-name${n}-illegal-char = ${rest_witness}
+
+-- Therefore the tail is not a list of legal identifier characters, and the name
+-- is not a legal Julia identifier: no package could ever have carried it.
+retired-name${n}-not-legal-ident : ¬ (LegalIdent retiredName${n})
+retired-name${n}-not-legal-ident (legal-stop start-witness charset-witness) =
+  charset-excludes {c = '${target}'} ${word}-not-ident-char retiredName${n}Tail
+    charset-witness retired-name${n}-illegal-char
+EOF
+    fi
   done <"$register"
 
   [ "$found_any" -eq 1 ] || fail "%s declares no retired names" "$register"

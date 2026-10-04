@@ -96,13 +96,17 @@ reverse mapping.
 legal" is a type with one constructor per legal character and no other
 inhabitants.
 
-| `IdentifierCharset`: `charset-excludes`, `legal-ident-excludes`
-| A character that is not legal cannot occur in a list of legal characters, and
-therefore cannot occur in a legal identifier — at the front (refuted by the
-leading-character rule) or anywhere later (refuted by the charset rule).
+| `IdentifierCharset`: `charset-excludes`
+| A character that is not legal cannot occur in a list of legal characters. This
+is the refutation the retired-name proofs are built from. There is deliberately no
+general "no legal identifier contains it" lemma: three formulations of one were
+rejected by Agda's coverage checker, each demanding one missing case per legal
+leading character, and all three diagnostics are recorded in the module where the
+lemma would have sat.
 
-| `IdentifierCharset`: `repo-form-not-legal-ident`
-| No repository-form name is a legal Julia identifier, for any package name,
+| `IdentifierCharset`: `suffix-has-dot`, `repo-form-not-legal-ident`
+| The `.` of the `.jl` suffix occurs in every repository-form name, so no
+repository-form name is a legal Julia identifier, for any package name whatsoever,
 because `.` is not an identifier character. This is the structural reason the two
 names cannot simply be made identical.
 
@@ -122,9 +126,11 @@ general result above.
 
 | `RetiredNames`: `retired-nameN-not-legal-ident`
 | Each retired name in `docs/naming/retired-names.txt` could never have been a
-Julia package name, with the offending character pointed at rather than searched
-for. This is the first-principles justification for the direction of the rename,
-as a proof.
+Julia package name, with the offending character pointed at by position rather
+than searched for, and refuted through `charset-excludes` on the name's tail (or
+through the leading-character rule when the offending character is first). This
+is the first-principles justification for the direction of the rename, as a proof
+rather than a paragraph.
 
 | `generated/agda/LiveIdentity.agda`: `live-reconciled`
 | *The gate.* The observed repository name equals the observed package name with

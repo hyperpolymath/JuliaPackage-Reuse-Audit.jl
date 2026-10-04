@@ -179,11 +179,13 @@ any-cons-elim _ notThere (any-there a) = notThere a
 -- one by the charset rule. This is what turns "the retired name could never have
 -- been a package name" into a proof instead of an assertion. Defined by
 -- composition, with no pattern matching and therefore no case tree to get wrong.
+-- The implicit arguments are bound in the clause because xs is used in the body:
+-- an omitted implicit is not merely unnamed, it is out of scope.
 legal-ident-excludes : {c : Char} -> ¬ (IdentChar c) -> ¬ (IdentStart c)
                      -> {x : Char} {xs : List Char}
                      -> IdentStart x -> AllIdentChars xs
                      -> ¬ (Any (IsChar c) (x ∷ xs))
-legal-ident-excludes badChar badStart st w =
+legal-ident-excludes {c} badChar badStart {x} {xs} st w =
   any-cons-elim (λ h -> badStart (subst IdentStart h st))
                 (charset-excludes badChar xs w)
 

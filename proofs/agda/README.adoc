@@ -104,11 +104,12 @@ rejected by Agda's coverage checker, each demanding one missing case per legal
 leading character, and all three diagnostics are recorded in the module where the
 lemma would have sat.
 
-| `IdentifierCharset`: `suffix-has-dot`, `repo-form-not-legal-ident`
-| The `.` of the `.jl` suffix occurs in every repository-form name, so no
-repository-form name is a legal Julia identifier, for any package name whatsoever,
-because `.` is not an identifier character. This is the structural reason the two
-names cannot simply be made identical.
+| `IdentifierCharset`: `append-illegal-refute`, `repo-form-not-legal-ident`
+| No repository-form name is a legal Julia identifier, for any package name
+whatsoever, because the `.` of the `.jl` suffix is not an identifier character.
+This is the structural reason the two names cannot simply be made identical. The
+lemma inducts on the left list of the append, which is what makes the witness
+index reducible enough to match at all.
 
 | `CanonicalIdentity`: `canonical-reconciled`
 | The *decided* identity — package name from `Project.toml`, repository name built

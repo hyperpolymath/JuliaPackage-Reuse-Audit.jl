@@ -168,10 +168,21 @@ charset-excludes bad (x ∷ xs) (aic-cons ic ics) (any-there a) =
 -- register, does — and the one general result below splits the package name
 -- itself before it touches a witness.
 
--- The '.' of the ".jl" suffix occurs in any name of the form cs ++ ".jl".
-suffix-has-dot : (cs : List Char) -> Any (IsChar '.') (cs ++ jlSuffix)
-suffix-has-dot [] = any-here refl
-suffix-has-dot (c ∷ cs) = any-there (suffix-has-dot cs)
+-- Refuting an AllIdentChars witness over an append whose RIGHT side already holds
+-- an illegal character.
+--
+-- Induction is on the left list, and that is the whole trick: `xs ++ ys` is stuck
+-- while xs is a variable, so a witness indexed by it cannot be matched. In each
+-- clause below xs is [] or x ∷ xs', the append reduces, and the witness becomes
+-- matchable. This is also why the general result about repository-form names is
+-- proved through here rather than by pointing at a position: the position of the
+-- '.' moves with the package name, but which side of the append it is on does not.
+append-illegal-refute : {c : Char} -> ¬ (IdentChar c)
+                      -> (xs ys : List Char) -> Any (IsChar c) ys
+                      -> AllIdentChars (xs ++ ys) -> ⊥
+append-illegal-refute bad [] ys a w = charset-excludes bad ys w a
+append-illegal-refute bad (x ∷ xs) ys a (aic-cons ic ics) =
+  append-illegal-refute bad xs ys a ics
 
 -- Therefore no repository-form name is a legal Julia identifier, for any package
 -- name whatsoever. A repository name cannot be the name of the package it holds,
@@ -179,12 +190,14 @@ suffix-has-dot (c ∷ cs) = any-there (suffix-has-dot cs)
 -- identical.
 --
 -- The package name is an explicit argument and is split first, so by the time
--- legal-stop is matched the index is concrete and no witness carries a variable
--- index. That is the shape charset-excludes uses, and the one Agda accepts.
+-- legal-stop is matched the index has reduced to a cons cell and the witness types
+-- come out concrete. The empty name is refuted by the leading-character rule,
+-- since ".jl" would have to begin with '.'; a non-empty one by the '.' its suffix
+-- carries, through the lemma above.
 repo-form-not-legal-ident : (pkg : List Char) -> ¬ (LegalIdent (repoNameOf pkg))
 repo-form-not-legal-ident [] (legal-stop st w) = dot-not-ident-start st
-repo-form-not-legal-ident (c ∷ cs) (legal-stop st w) =
-  charset-excludes dot-not-ident-char (cs ++ jlSuffix) w (suffix-has-dot cs)
+repo-form-not-legal-ident (x ∷ xs) (legal-stop st w) =
+  append-illegal-refute dot-not-ident-char xs jlSuffix (any-here refl) w
 BODY
 } >"$out.tmp"
 

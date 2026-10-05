@@ -147,7 +147,7 @@ end
             end
             @test block == body
 
-            message = include(example_path)
+            message = Base.include(Module(:QuickstartSandbox), example_path)
             @test message isa String
             if message isa String
                 @test occursin("scaffolded successfully", message)

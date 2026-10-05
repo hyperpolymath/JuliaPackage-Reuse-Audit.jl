@@ -1,0 +1,27 @@
+# SPDX-License-Identifier: CC-BY-SA-4.0
+# SPDX-FileCopyrightText: 2026 Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
+#
+# Files allowed to mention a retired name, one path per line (relative to the
+# repository root, '#' starts a comment). Every entry needs a reason: this list
+# is the historical record, not an escape hatch, and adding to it weakens the
+# gate.
+#
+# The register itself, so that the rule can state what it forbids.
+docs/naming/retired-names.txt
+# The allowlist, so a reviewer can see what is exempt without opening the gate.
+docs/naming/retired-names-allowlist.txt
+# The changelog: a rename that is not in the changelog did not happen.
+CHANGELOG.adoc
+# The decision record that retired the name, with its evidence.
+docs/decisions/0002-reconcile-repository-and-package-name.adoc
+# The Agda module generated from the register, which proves each retired name
+# could never have been a Julia package name. The characters of the retired
+# names appear here as data.
+proofs/agda/RetiredNames.agda
+# The proof gate's own documentation, which quotes the retired name to explain
+# what the negative controls reproduce.
+proofs/agda/README.adoc
+# The negative control that reproduces the pre-rename defect. Its comment names
+# the retired repository so a reader knows what the fixture is a recording of;
+# the claim itself is built from RetiredNames.retiredName1, not retyped.
+tests/reject/MismatchedRepoName.agda

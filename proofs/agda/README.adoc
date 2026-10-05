@@ -1,0 +1,245 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+// SPDX-FileCopyrightText: 2026 Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
+= The package identity proofs
+
+This directory contains the formal half of the package identity gate. It proves
+the naming rule this repository lives by, and the CI job
+`🔴 GATE: Package identity (Agda-proved)` applies that rule to live repository
+state on every pull request.
+
+The other half is mechanical (`tests/check-identity.sh`), and the division
+between them is deliberate: proofs establish what must be true of *any* pair of
+names, checks establish what is true of *these* names. Section
+<<what-is-not-proved>> says exactly where the line falls.
+
+== Running it
+
+[source,bash]
+----
+just proofs                                  # every section, via scripts/proof-gate.sh
+bash scripts/proof-gate.sh --section proofs  # one section
+bash tests/check-proofs.sh                   # positive controls only (needs agda)
+bash tests/check-rejections.sh               # negative controls only (needs agda)
+----
+
+Without `agda` on `PATH` these fail. They do not skip: an unchecked proof is not
+a proof, and a gate that quietly checks less than it claims is the failure mode
+`standards/docs/CICD-SIGNAL-DISCIPLINE.adoc` calls a fake gate.
+
+The proof discipline is the estate's, and matches `epistemic-types` and
+`firmboot`:
+
+[source]
+----
+agda --no-libraries --safe --without-K --double-check --ignore-interfaces -W error
+----
+
+`--no-libraries` means the trusted base is Agda's builtin modules and nothing
+else — no standard library, so no library version can quietly become part of what
+is assumed. `--safe` forbids axioms and foreign code. `--double-check`
+re-verifies the development after typechecking. `--ignore-interfaces` means no
+cached result can stand in for a check. `-W error` makes a warning a failure.
+
+== The rule
+
+[source,text]
+----
+repository name  =  package name ++ ".jl"
+----
+
+Written as a total function in `PackageNaming.agda`:
+
+[source,agda]
+----
+jlSuffix   = '.' ∷ 'j' ∷ 'l' ∷ []
+repoNameOf pkg = pkg ++ jlSuffix
+----
+
+Names are lists of characters, not `String`s. Converting a string literal to a
+list is a primitive whose reduction behaviour belongs to the implementation
+rather than to the theory, and nothing here needs to depend on it: a character
+list reduces by Agda's ordinary evaluation rules, which is what makes the
+`refl`-discharged obligations below real checks.
+
+== Checked constructions
+
+[cols="2,3",options="header"]
+|===
+| Source and named result | What it establishes
+
+| `PackageNaming`: `round-trip`
+| Recovering the package name from a repository name returns the package name it
+came from. Discharged by `refl`, i.e. by computation.
+
+| `PackageNaming`: `packageNameOf-well-defined`
+| The recovered package name does not depend on which witness of "is a repository
+name" is supplied, so `packageNameOf` really is a function of the repository name.
+Proved by cancelling the common `.jl` suffix (`append-cancel-right`).
+
+| `PackageNaming`: `repoNameOf-injective`
+| Two different package names never produce the same repository name: a
+repository name identifies at most one package. Same cancellation.
+
+| `PackageNaming`: `repoNameOf-not-identity`
+| The repository form is never the same string as the package form, for any
+package name. This is why the two names *can* drift, and therefore why their
+agreement has to be checked rather than assumed.
+
+| `PackageNaming`: `reconciled-gives-repo-form`,
+`reconciled-recovers-package`
+| A reconciled identity always yields a repository-form witness, and the package
+it recovers is the one recorded. The invariant is not a dead end: it licenses the
+reverse mapping.
+
+| `IdentifierCharset`: `IdentChar`, `IdentStart`, `AllIdentChars`, `LegalIdent`
+| The Julia identifier character rule as indexed datypes, so "this character is
+legal" is a type with one constructor per legal character and no other
+inhabitants.
+
+| `IdentifierCharset`: `charset-excludes`
+| A character that is not legal cannot occur in a list of legal characters. This
+is the refutation the retired-name proofs are built from. There is deliberately no
+general "no legal identifier contains it" lemma: three formulations of one were
+rejected by Agda's coverage checker, each demanding one missing case per legal
+leading character, and all three diagnostics are recorded in the module where the
+lemma would have sat.
+
+| `IdentifierCharset`: `append-illegal-refute`, `repo-form-not-legal-ident`
+| No repository-form name is a legal Julia identifier, for any package name
+whatsoever, because the `.` of the `.jl` suffix is not an identifier character.
+This is the structural reason the two names cannot simply be made identical. The
+lemma inducts on the left list of the append, which is what makes the witness
+index reducible enough to match at all.
+
+| `CanonicalIdentity`: `canonical-reconciled`
+| The *decided* identity — package name from `Project.toml`, repository name built
+from it by `repoNameOf` — satisfies the invariant.
+
+| `CanonicalIdentity`: `canonical-package-legal`, `canonical-package-start`,
+`canonical-package-charset`
+| The decided package name is a legal identifier: non-empty, legal first
+character, every character legal. The witnesses name real constructors, so Agda
+checks them against the real characters.
+
+| `CanonicalIdentity`: `canonical-repo-not-legal-ident`
+| The decided repository name is not a legal identifier — an instance of the
+general result above.
+
+| `RetiredNames`: `retired-nameN-not-legal-ident`
+| Each retired name in `docs/naming/retired-names.txt` could never have been a
+Julia package name, with the offending character pointed at by position rather
+than searched for, and refuted through `charset-excludes` on the name's tail (or
+through the leading-character rule when the offending character is first). This
+is the first-principles justification for the direction of the rename, as a proof
+rather than a paragraph.
+
+| `generated/agda/LiveIdentity.agda`: `live-reconciled`
+| *The gate.* The observed repository name equals the observed package name with
+`.jl` appended. Both sides are transcribed from different places — `$GITHUB_REPOSITORY`
+and `Project.toml` — and the obligation is discharged by `refl`, so Agda's
+evaluator decides it.
+
+| `generated/agda/LiveIdentity.agda`: `live-package-is-canonical-package`,
+`live-repo-is-canonical-repo`
+| Drift guards. The observed identity must equal the decided one, so neither side
+can move without the other and a half-applied rename fails here.
+
+| `generated/agda/LiveIdentity.agda`: `live-package-legal` and friends
+| The observed package name satisfies the identifier rule, with witnesses Agda
+checks against the observed characters.
+|===
+
+== Negative controls
+
+`tests/reject/` holds claims that are false on purpose. `tests/check-rejections.sh`
+requires each to be rejected with Agda's type-error status *and* the expected
+diagnostic, because a fixture that fails to parse, or fails on a missing import,
+is not evidence of anything. The list in that script is a manifest which must
+equal the files present, so neither a fixture nor a check can be added or removed
+silently.
+
+[cols="1,2",options="header"]
+|===
+| Fixture | The false claim
+
+| `MismatchedRepoName`
+| The pre-rename state of this repository: a repository called
+`JuliaPackage-Reuse-Audit.jl` holding a package called `JuliaPackageSpitter`.
+Both names come from the committed modules rather than being retyped, so the
+fixture keeps reproducing the real defect instead of a strawman.
+
+| `MissingJlSuffix`
+| A repository whose name is exactly its package name. Contradicts
+`repoNameOf-not-identity`.
+
+| `RepoFormIsIdentity`
+| That the naming convention is the identity function. If this typechecked,
+`repoNameOf-not-identity` would be vacuous and the whole gate decorative — which
+is why it is a fixture.
+
+| `WrongCharsetWitness`
+| That a hyphen is a legal identifier character, offered as the constructor for
+`'J'`. This is what stops a generator emitting witnesses for names it should have
+refused.
+
+| `WrongStartWitness`
+| That a digit may begin an identifier, offered as the constructor for `'A'`.
+
+| `RetiredNameIsLegal`
+| The charset witness a retired, hyphenated name would need, offered as the
+witness for the empty list.
+
+| `DriftedCanonical`
+| That the decided repository name is the decided package name — the drift the
+live module's guards exist to catch.
+|===
+
+== What is not proved
+
+Stated here so that the proofs are not credited with more than they carry. Each
+item below is *checked mechanically*, and the checker is self-tested against
+trees that must be rejected (`tests/check-identity-fixtures.sh`):
+
+* That the `name` field of `Project.toml` is the name Julia will actually give
+  the module. Checked by reading the `module` declaration in `src/<Name>.jl` and
+  by `test/identity.jl`, which compares both against `nameof(JuliaPackageSpitter)`
+  at runtime, inside the loaded package.
+* That `$GITHUB_REPOSITORY` is the name of the repository GitHub is serving. That
+  is the platform's own statement of its state; nothing in this repository can
+  prove it, and a proof that assumed it would be circular.
+* That the retired names in the register are the only names this repository has
+  ever had. The register is a record kept by hand, and its completeness is a
+  matter of history rather than mathematics.
+* That the character rule in `IdentifierCharset.agda` is the rule Julia
+  implements. It is the rule as documented, encoded as data, and the encoding is
+  generated in one place and diffed against the committed copy so it cannot be
+  widened by hand — but its fidelity to Julia's parser is a claim about Julia.
+* Anything about the *quality* of a scaffolded package. These proofs are about
+  names.
+
+== Layout
+
+[source,text]
+----
+proofs/
+  TRUSTED-BASE.adoc          what is trusted, and the budget for axioms (zero)
+  agda/
+    PackageNaming.agda       the rule and its properties (hand-written)
+    IdentifierCharset.agda   the identifier character rule (generated)
+    CanonicalIdentity.agda   the decided identity (generated)
+    RetiredNames.agda        the retired names, refuted (generated)
+    All.agda                 one import for the whole development
+    README.adoc              this file
+tests/
+  check-proofs.sh            positive controls
+  check-rejections.sh        negative controls
+  check-identity.sh          the mechanical twin of the proofs
+  check-identity-fixtures.sh self-test for the mechanical twin
+  reject/                    the false claims
+generated/agda/
+  LiveIdentity.agda          observed state, produced at check time, never committed
+----
+
+Generated files are marked as such in their headers, are produced only by the
+scripts named there, and are regenerated and diffed by the
+`committed-generator-drift` section of the gate. Editing one by hand is caught.

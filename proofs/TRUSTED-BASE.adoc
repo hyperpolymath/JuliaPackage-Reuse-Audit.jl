@@ -1,0 +1,107 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+// SPDX-FileCopyrightText: 2026 Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
+= Trusted base
+
+What has to be believed for the proofs in `proofs/agda/` to mean anything, listed
+so that the list can be argued with rather than assumed.
+
+== The axiom budget is zero
+
+No `postulate`. No holes (`?`, `{! !}`). No `{-# TERMINATING #-}`,
+`{-# NO_POSITIVITY_CHECK #-}`, `{-# NO_UNIVERSE_CHECK #-}`. No `--type-in-type`,
+`--rewriting`, `--allow-unsolved-metas`, `--allow-exec`, `--omega-in-omega`,
+`--with-K`. No `primEraseEquality`, no `trustMe`, no `{-# BUILTIN #-}`,
+`{-# FOREIGN #-}` or `{-# COMPILE #-}` in this repository's modules. Every module
+declares `--safe --without-K` in its own `OPTIONS` pragma, so the discipline does
+not depend on somebody remembering the command line.
+
+The budget is enforced by `scripts/check-agda-trusted-base.sh`, which scans the
+proof tree and the rejection fixtures, and reports a count against a budget of
+zero. It is not a declaration in a document; it is a section of the gate, and the
+gate fails when the count exceeds the budget.
+
+The scanner is itself tested, in both directions, by
+`tests/check-trusted-base-fixtures.sh`:
+
+* `MentionsInComments.agda` mentions every banned word *in comments* and must
+  pass. A scanner that matches prose is the defect `cicd-suite` measured against
+  its own hygiene check — 112 flagged files in one repository, 313 in another,
+  almost all of them documents discussing a marker rather than using one — and a
+  gate that cries wolf gets ignored, which is worse than not having it.
+* `RealPostulate.agda`, `RealHole.agda`, `UnsafePragma.agda` and
+  `MissingSafeOption.agda` really violate the discipline and must be flagged. The
+  last one contains no hatch at all: it simply omits the `OPTIONS` pragma, which
+  is why the scanner enforces a positive requirement and not only a ban list.
+
+== What is trusted
+
+In rough order of how much could go wrong:
+
+. *Agda's type theory and its implementation*, version 2.6.4.3, pinned by
+   `agda-bin=2.6.4.3-1+b2` in a digest-pinned `debian:13-slim` container, with
+   the binary's self-reported version asserted before any gate runs. A different
+   Agda is a different trusted base, so a version drift is a failure rather than
+   a warning.
+. *Agda's builtin modules*: `Agda.Primitive`, `Agda.Builtin.Char`,
+   `Agda.Builtin.List`, `Agda.Builtin.Nat`, `Agda.Builtin.Equality`. These are
+   the datatype declarations the implementation ships and compiles specially.
+   Nothing else is imported: `--no-libraries` is passed on every invocation, so
+   the standard library is not in the base and no library version can quietly
+   become part of what is assumed.
+. *The container supply chain*: the image digest, and the Debian package that
+   provides `agda-bin`. This is the weakest link in any CI-based proof and it is
+   not specific to this repository; the digest pin is what makes it auditable.
+. *The generators.* `scripts/gen-identifier-charset.sh` and
+   `scripts/gen-identity-agda.sh` write Agda source. They are trusted to
+   transcribe, and they are not trusted to decide anything: every obligation they
+   emit is discharged by `refl` against a real constructor, so a generator that
+   lied would produce a module that does not typecheck. Their output is also
+   regenerated and diffed against the committed copy by the
+   `committed-generator-drift` section, so the data cannot be edited by hand
+   behind their back.
+. *The mechanical checker.* `tests/check-identity.sh` reads the tree with `grep`
+   and `awk`. It is trusted to report what it found, and it is tested against
+   fifteen generated trees by `tests/check-identity-fixtures.sh`: one consistent
+   tree that must be accepted and fourteen broken in exactly one way each that
+   must be rejected. A vacuous checker cannot pass that.
+. *The platform's account of its own state.* `$GITHUB_REPOSITORY` is GitHub
+   telling the job which repository it is running in. Nothing in this repository
+   can prove that, and a proof which assumed it would be circular. It is the one
+   value in the gate that is taken on trust from outside, and it is taken from
+   the system whose state it describes.
+
+== What the proofs do not buy
+
+* Soundness of Agda, or of the machine it ran on. Standard caveat, unchanged.
+* Fidelity of the character rule to Julia's actual parser. `IdentifierCharset.agda`
+  encodes the rule as documented — leading letter or underscore, then letters,
+  digits, underscore or `!` — and encodes it in one generated place so that it
+  cannot be widened quietly. Whether Julia's parser agrees is a claim about Julia,
+  checked nowhere here.
+* Anything about the quality, completeness or safety of a scaffolded package.
+  These proofs are about names.
+* That the retired-name register is complete. It is a record kept by hand, and
+  `RetiredNames.agda` proves properties of the names in it, not that they are all
+  of them.
+
+== Why the base is this small
+
+The proofs could have imported the standard library and used `Data.List`,
+`Data.Char` and `Relation.Binary.PropositionalEquality`. They do not, for three
+reasons:
+
+. A smaller base is a smaller thing to argue about. Everything here is either
+   Agda's own builtins or fifty lines of definitions that can be read in one
+   sitting.
+. Version independence. `--no-libraries` means no library version enters the
+   trusted base, so an `agda-stdlib` package update cannot change what the proofs
+   mean, and the gate does not depend on how a distribution registers library
+   files.
+. The estate already does it this way. `epistemic-types` and `firmboot` both
+   check builtin-only developments with the same flags; reusing a verified
+   pattern is cheaper and safer than inventing a second one.
+
+The cost is boilerplate: `cong`, `sym`, `trans`, `subst`, list append and the
+length argument are all written out here. That is a fair trade for a base a
+reviewer can hold in their head, and it is why `PackageNaming.agda` opens with
+the equality toolkit rather than with the naming rule.

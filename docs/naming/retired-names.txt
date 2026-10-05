@@ -1,0 +1,26 @@
+# SPDX-License-Identifier: CC-BY-SA-4.0
+# SPDX-FileCopyrightText: 2026 Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
+#
+# Retired names for this repository.
+#
+# One name per line. Blank lines and lines beginning '#' are ignored. A retired
+# name must not reappear anywhere in the tracked tree, except in the files listed
+# in retired-names-allowlist.txt (the historical record: the changelog, the ADR
+# that retired it, and this register).
+#
+# Enforcement is mechanical, not editorial:
+#   * tests/check-identity.sh   greps the tree and fails on any hit outside the
+#                               allowlist;
+#   * proofs/agda/RetiredNames.agda (generated from this file by
+#     scripts/gen-identity-agda.sh --mode retired) proves that each name below
+#     could never have been a legal Julia package name, which is why it was
+#     retired rather than adopted.
+#
+# Retired 2026-10-04 by the decision recorded in
+# docs/decisions/0002-reconcile-repository-and-package-name.adoc: the repository
+# was named for a "reuse audit" capability that is still unimplemented roadmap
+# work (ROADMAP.adoc, v0.3.0), while the package it contains, the README, the
+# repository description and the registry entry all describe a scaffolder.
+JuliaPackage-Reuse-Audit.jl
+JuliaPackage-Reuse-Audit
+juliapackage-reuse-audit
